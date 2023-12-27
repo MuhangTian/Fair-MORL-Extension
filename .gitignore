@@ -1,0 +1,66 @@
+# Operating system files
+.DS_Store            # macOS file system index files
+Thumbs.db            # Windows image file cache
+*.swp                # Swap files for Vim editor
+
+# IDE/editor specific files
+.idea/               # PyCharm/IntelliJ IDEA
+.vscode/             # Visual Studio Code
+*.sublime-*          # Sublime Text editor files
+.project             # Eclipse project file
+*.iml                # IntelliJ IDEA module
+*.pyc                # Python compiled files
+
+# Build directories
+__pycache__/         # Python cache directory
+build/               # Build directory
+dist/                # Distribution directory
+*.egg-info/          # Python egg metadata
+*.o                  # Compiled object files
+*.a                  # Compiled archive files
+
+# Packaging
+*.tar.gz
+*.zip
+*.rar
+
+# Dependency directories
+node_modules/        # Node.js modules
+bower_components/    # Bower components
+
+# Virtual environment
+venv/                # Python virtual environment
+.env                 # Environment variables
+
+# Logs and databases
+*.log                # Log files
+*.sql                # SQL database files
+*.sqlite             # SQLite database files
+*.db                 # Generic database files
+
+# Personal IDE settings
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Test output
+/coverage/           # Coverage reports
+.nyc_output/         # NYC test reports
+
+# Misc
+*.class              # Compiled Java class files
+*.exe                # Executable files
+*.dll                # Windows DLL files
+
+# Certificates
+*.pem
+*.key
+
+# Others
+*.sass-cache/
+.cache
+.tmp
+__pycache__
+scratch.py
+wandb
