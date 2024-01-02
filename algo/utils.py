@@ -2,6 +2,8 @@
 Store helper functions
 """
 import numpy as np
+import os
+import argparse
 
 
 class DiscreFunc:
@@ -41,3 +43,37 @@ class WelfareFunc:
             return np.power(np.mean(x ** self.p), 1 / self.p)
         else:
             raise ValueError("Invalid welfare function name")
+    
+    def nash_welfare(self, x):
+        assert isinstance(x, np.ndarray), "x must be a numpy array"
+        return np.power(np.prod(x), 1 / len(x))
+
+def is_file_on_disk(file_name):
+    if not os.path.isfile(file_name):
+        raise argparse.ArgumentTypeError("the file %s does not exist!" % file_name)
+    else:
+        return file_name
+
+def is_positive_integer(value):
+    parsed_value = int(value)
+    if parsed_value <= 0:
+        raise argparse.ArgumentTypeError("%s is an invalid positive int value" % value)
+    return parsed_value
+
+def is_positive_float(value):
+    parsed_value = float(value)
+    if parsed_value <= 0.0:
+        raise argparse.ArgumentTypeError("%s must be a positive value" % value)
+    return parsed_value
+
+def is_within_zero_one_float(value):
+    parsed_value = float(value)
+    if parsed_value <= 0.0 or parsed_value >=1:
+        raise argparse.ArgumentTypeError("%s must be within (0,1)" % value)
+    return parsed_value
+
+def is_file_not_on_disk(file_name):
+    if os.path.isfile(file_name):
+        raise argparse.ArgumentTypeError("the file %s already exists on disk" % file_name)
+    else:
+        return file_name

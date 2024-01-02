@@ -64,3 +64,6 @@ venv/                # Python virtual environment
 __pycache__
 scratch.py
 wandb
+logs
+results
+.vscode

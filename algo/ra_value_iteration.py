@@ -8,17 +8,19 @@ from algo.utils import DiscreFunc, WelfareFunc
 
 
 class RAValueIteration:
-    def __init__(self, env, discre_alpha, gamma, reward_dim, time_horizon, welfare_func_name, nsw_lambda, seed=1122, wdb=False) -> None:
+    def __init__(self, env, discre_alpha, gamma, reward_dim, time_horizon, welfare_func_name, nsw_lambda, save_path, seed=1122, p=None, wdb=False) -> None:
         self.env = env
         self.discre_alpha = discre_alpha
         self.discre_func = DiscreFunc(discre_alpha)
         self.gamma = gamma
         self.reward_dim = reward_dim
         self.time_horizon = time_horizon
-        self.welfare_func = WelfareFunc(welfare_func_name, nsw_lambda)
+        self.welfare_func_name = welfare_func_name
+        self.welfare_func = WelfareFunc(welfare_func_name, nsw_lambda, p)
         self.training_complete = False
         self.seed = seed
         self.wdb = wdb
+        self.save_path = save_path
     
     def initialize(self):
         min, max = 0, np.floor(self.time_horizon / self.discre_alpha) * self.discre_alpha
@@ -70,14 +72,16 @@ class RAValueIteration:
             self.evaluate()
         
         print("Finish training")
+        self.evaluate(final=True)
+        np.savez(self.save_path, V=self.V, Pi=self.Pi, Racc_record=self.Racc_record)
     
-    def evaluate(self):
+    def evaluate(self, final=False):
         self.env.seed(self.seed)
         state = self.env.reset()
         Racc = np.zeros(self.reward_dim)
         c = 0
         
-        for t in range(self.time_horizon):
+        for t in range(self.time_horizon, 0, -1):
             Racc_code = self.encode_Racc(self.discre_func(Racc))
             action = self.Pi[state, Racc_code, t]
             
@@ -87,6 +91,15 @@ class RAValueIteration:
             
             c += 1
         
-        if self.wdb:
-            wandb.log({"welfare": self.welfare_func(Racc)})
+        if self.welfare_func_name == "nsw":
+            if self.wdb:
+                wandb.log({self.welfare_func_name: self.welfare_func.nash_welfare(Racc)})
+            print(f"{self.welfare_func_name}: {self.welfare_func.nash_welfare(Racc)}, Racc: {Racc}")
+        elif self.welfare_func_name in ["p-welfare", "egalitarian"]:
+            if self.wdb:
+                wandb.log({self.welfare_func_name: self.welfare_func(Racc)})
+            print(f"{self.welfare_func_name}: {self.welfare_func(Racc)}, Racc: {Racc}")   
+            
+        if final:
+            self.Racc_record = Racc
         
