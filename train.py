@@ -4,6 +4,7 @@ import wandb
 
 from algo.ra_value_iteration import RAValueIteration
 from algo.welfare_q import WelfareQ
+from algo.linear_scalarize import LinearScalarize
 from envs.fair_taxi import Fair_Taxi_MOMDP
 from algo.utils import is_positive_integer, is_positive_float, is_file_not_on_disk, is_within_zero_one_float
 
@@ -40,11 +41,11 @@ def parse_arguments():
     prs.add_argument('--time_horizon', type=is_positive_integer, default=1)
     prs.add_argument('--discre_alpha', type=is_within_zero_one_float, default=0.5)
     prs.add_argument("--gamma", type=is_within_zero_one_float, default=0.999)
-    prs.add_argument("--welfare_func_name", choices=["egalitarian", "nsw", "p-welfare"], default="nsw")
+    prs.add_argument("--welfare_func_name", choices=["egalitarian", "nash-welfare", "p-welfare"], default="nash-welfare")
     prs.add_argument("--nsw_lambda", type=is_positive_float, default=1e-4)
     prs.add_argument("--wandb", action="store_true")
     prs.add_argument("--save_path", type=is_file_not_on_disk, default="results/trial.npz")
-    prs.add_argument("--method", choices=["welfare_q", "ra_value_iteration"], required=True)
+    prs.add_argument("--method", choices=["welfare_q", "ra_value_iteration", "linear_scalarize"], required=True)
     prs.add_argument("--lr", type=is_positive_float, default=0.1)
     prs.add_argument("--epsilon", type=is_within_zero_one_float, default=0.1)
     prs.add_argument("--episodes", type=is_positive_integer, default=1000)
@@ -92,6 +93,21 @@ if __name__ == "__main__":
             save_path = args.save_path,
             dim_factor = args.dim_factor,
             p = args.p,
+        )
+    elif args.method == "linear_scalarize":
+        algo = LinearScalarize(
+            env = env,
+            init_val = args.init_val,
+            episodes = args.episodes,
+            weights = [0.37, 0.63],     # optimal tuned weights
+            lr = args.lr,
+            gamma = args.gamma,
+            epsilon = args.epsilon,
+            welfare_func_name = args.welfare_func_name,
+            save_path = args.save_path,
+            nsw_lambda = args.nsw_lambda,
+            p = args.p,
+            wdb = args.wandb,
         )
 
     algo.train()

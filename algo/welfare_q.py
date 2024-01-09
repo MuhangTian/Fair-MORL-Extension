@@ -17,8 +17,8 @@ class WelfareQ:
         self.env = env
         self.lr = lr
         self.gamma = gamma
+        self.welfare_func_name = "nash welfare" if welfare_func_name == "nash-welfare" else welfare_func_name
         self.welfare_func = WelfareFunc(welfare_func_name, nsw_lambda, p)
-        self.welfare_func_name = welfare_func_name
         self.p = p
         self.save_path = save_path
         self.seed = seed
@@ -82,7 +82,7 @@ class WelfareQ:
                     if self.non_stationary:
                         if self.welfare_func_name == "p-welfare":
                             action = self.argmax_p_welfare(R_acc+np.power(self.gamma,c)*self.Q[state])
-                        elif self.welfare_func_name == "nsw":
+                        elif self.welfare_func_name == "nash welfare":
                             action = self.argmax_nsw(R_acc, np.power(self.gamma,c)*self.Q[state])
                         elif self.welfare_func_name == "egalitarian":
                             action = self.argmax_egalitarian(R_acc, R_acc+np.power(self.gamma,c)*self.Q[state])
@@ -94,7 +94,7 @@ class WelfareQ:
                 
                 if self.welfare_func_name == "p-welfare":
                     max_action = self.argmax_p_welfare(self.gamma*self.Q[next])
-                elif self.welfare_func_name == "nsw":
+                elif self.welfare_func_name == "nash welfare":
                     max_action = self.argmax_nsw(0, self.gamma*self.Q[next])
                 elif self.welfare_func_name == "egalitarian":
                     max_action = self.argmax_egalitarian(R_acc, self.gamma*self.Q[next])
@@ -108,7 +108,7 @@ class WelfareQ:
         
             R_acc = np.where(R_acc < 0, 0, R_acc) # Replace the negatives with 0
             
-            if self.welfare_func_name == "nsw":
+            if self.welfare_func_name == "nash welfare":
                 nonlinear_score = np.power(np.product(R_acc), 1/len(R_acc))
             elif self.welfare_func_name in ["p-welfare", "egalitarian"]:
                 nonlinear_score = self.welfare_func(R_acc)

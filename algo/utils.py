@@ -23,7 +23,7 @@ class WelfareFunc:
         self.check()
     
     def check(self):
-        if self.welfare_func_name == "nsw":
+        if self.welfare_func_name == "nash-welfare":
             assert self.nsw_lambda is not None, "nsw_lambda must be specified for nsw welfare function"
         elif self.welfare_func_name == "p-welfare":
             assert self.p is not None, "p must be specified for p-welfare function"
@@ -35,7 +35,7 @@ class WelfareFunc:
             return np.sum(x)
         elif self.welfare_func_name == "egalitarian":
             return np.min(x)
-        elif self.welfare_func_name == "nsw":
+        elif self.welfare_func_name == "nash-welfare":
             x = x + self.nsw_lambda
             x = np.where(x <= 0, self.nsw_lambda, x)  # replace any negative values or zeroes with lambda
             return np.sum(np.log(x))

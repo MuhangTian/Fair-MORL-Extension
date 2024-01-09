@@ -10,12 +10,12 @@ from algo.utils import DiscreFunc, WelfareFunc
 class RAValueIteration:
     def __init__(self, env, discre_alpha, gamma, reward_dim, time_horizon, welfare_func_name, nsw_lambda, save_path, seed=1122, p=None, wdb=False) -> None:
         self.env = env
+        self.welfare_func_name = "nash welfare" if welfare_func_name == "nash-welfare" else welfare_func_name
         self.discre_alpha = discre_alpha
         self.discre_func = DiscreFunc(discre_alpha)
         self.gamma = gamma
         self.reward_dim = reward_dim
         self.time_horizon = time_horizon
-        self.welfare_func_name = welfare_func_name
         self.welfare_func = WelfareFunc(welfare_func_name, nsw_lambda, p)
         self.training_complete = False
         self.seed = seed
@@ -91,7 +91,7 @@ class RAValueIteration:
             
             c += 1
         
-        if self.welfare_func_name == "nsw":
+        if self.welfare_func_name == "nash welfare":
             if self.wdb:
                 wandb.log({self.welfare_func_name: self.welfare_func.nash_welfare(Racc)})
             print(f"{self.welfare_func_name}: {self.welfare_func.nash_welfare(Racc)}, Racc: {Racc}")
