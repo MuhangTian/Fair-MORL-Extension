@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=RA-VV
+#SBATCH --job-name=RA-ABA2
 #SBATCH --time=30-00:00:00
 #SBATCH --partition=compsci
-#SBATCH --mem=100G
+#SBATCH --mem=10G
 #SBATCH --mail-user=muhang.tian@duke.edu
 #SBATCH --output=logs/%j.out
 #SBATCH --mail-type=END
@@ -11,13 +11,14 @@
 export size=4
 export num_locs=2
 export time_horizon=100
-export discre_alpha=0.8
+export discre_alpha=$2
 export gamma=0.999
-export welfare_func_name=p-welfare
-export nsw_lambda=0.0000001
+export welfare_func_name=nash-welfare
+export nsw_lambda=1
 export save_path=$1
 export method=ra_value_iteration
-export p=0.9
+export seed=1122
+export project=RA_Ablation_2
 
 python train.py \
     --size $size \
@@ -29,5 +30,6 @@ python train.py \
     --nsw_lambda $nsw_lambda \
     --save_path $save_path \
     --method $method \
-    --p $p \
+    --project $project \
+    --seed $seed \
     --wandb \

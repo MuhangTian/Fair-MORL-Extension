@@ -16,7 +16,6 @@ class LinearScalarize:
         self.env = env
         self.init_val = init_val
         self.welfare_func_name = "nash welfare" if welfare_func_name == "nash-welfare" else welfare_func_name
-        print(f"LinearScalarize: {self.welfare_func_name}")
         self.episodes = episodes
         self.weights = weights
         self.lr = lr

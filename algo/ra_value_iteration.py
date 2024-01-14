@@ -2,6 +2,7 @@ import itertools
 
 import numpy as np
 from tqdm import tqdm
+from sys import getsizeof
 
 import wandb
 from algo.utils import DiscreFunc, WelfareFunc
@@ -37,6 +38,9 @@ class RAValueIteration:
         ))
         self.Pi = self.V.copy()
         
+        if self.wdb:
+            wandb.log({"memory (mb)": round(getsizeof(self.V) / 1024 / 1024, 2)})
+        
         for Racc in tqdm(self.init_Racc, desc="Initializing..."):
             for state in range(self.env.observation_space.n):
                 Racc_code = self.encode_Racc(Racc)
@@ -69,7 +73,7 @@ class RAValueIteration:
                     self.V[state, Racc_code, t] = np.max(all_V)
                     self.Pi[state, Racc_code, t] = np.argmax(all_V)
             
-            self.evaluate()
+            # self.evaluate()
         
         print("Finish training")
         self.evaluate(final=True)

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=LinearS
+#SBATCH --job-name=Mixture
 #SBATCH --time=30-00:00:00
 #SBATCH --partition=compsci
 #SBATCH --mem=100G
@@ -15,13 +15,12 @@ export gamma=0.999
 export epsilon=0.1
 export episodes=20000
 export init_val=1
-export welfare_func_name=p-welfare
+export welfare_func_name=nash-welfare
 export nsw_lambda=0.0000001
 export save_path=$1
-export method=linear_scalarize
+export method=mixture
 export dim_factor=0.0001
 export time_horizon=100
-export p=0.9
 
 python \
     train.py \
@@ -38,5 +37,4 @@ python \
     --method $method \
     --dim_factor $dim_factor \
     --time_horizon $time_horizon \
-    --p $p \
     --wandb \

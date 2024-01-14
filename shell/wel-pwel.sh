@@ -21,7 +21,7 @@ export save_path=$1
 export method=welfare_q
 export dim_factor=0.0001
 export time_horizon=100
-export p=0.1
+export p=0.9
 
 python \
     train.py \
