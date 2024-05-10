@@ -43,6 +43,7 @@ def parse_arguments():
     prs.add_argument('--time_horizon', type=is_positive_integer, default=1)
     prs.add_argument('--discre_alpha', type=is_positive_float, default=0.5)
     prs.add_argument("--gamma", type=is_within_zero_one_float, default=0.999)
+    prs.add_argument("--growth_rate", type=is_positive_float, default=1.001)
     prs.add_argument("--welfare_func_name", choices=["egalitarian", "nash-welfare", "p-welfare"], default="nash-welfare")
     prs.add_argument("--nsw_lambda", type=is_positive_float, default=1e-4)
     prs.add_argument("--wandb", action="store_true")
@@ -60,7 +61,8 @@ def parse_arguments():
 
 def init_if_wandb(args):
     if args.wandb:
-        wandb.init(project=args.project, entity="muhang-tian")
+        # wandb.init(project=args.project, entity="muhang-tian")
+        wandb.init(project=args.project, entity="nianli_peng")
         wandb.config.update(args)
 
 if __name__ == "__main__":
@@ -78,6 +80,7 @@ if __name__ == "__main__":
             env = env,
             discre_alpha = args.discre_alpha,
             gamma = args.gamma,
+            growth_rate = args.growth_rate,
             reward_dim = args.num_locs,
             time_horizon = args.time_horizon,
             welfare_func_name = args.welfare_func_name,

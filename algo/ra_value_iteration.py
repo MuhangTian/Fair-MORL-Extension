@@ -9,11 +9,11 @@ from algo.utils import DiscreFunc, WelfareFunc
 
 
 class RAValueIteration:
-    def __init__(self, env, discre_alpha, gamma, reward_dim, time_horizon, welfare_func_name, nsw_lambda, save_path, seed=1122, p=None, wdb=False) -> None:
+    def __init__(self, env, discre_alpha, growth_rate, gamma, reward_dim, time_horizon, welfare_func_name, nsw_lambda, save_path, seed=1122, p=None, wdb=False) -> None:
         self.env = env
         self.welfare_func_name = "nash welfare" if welfare_func_name == "nash-welfare" else welfare_func_name
-        self.discre_alpha = discre_alpha
-        self.discre_func = DiscreFunc(discre_alpha)
+        self.discre_alpha = discre_alpha # Discretization factor for accumulated rewards.
+        self.discre_func = DiscreFunc(discre_alpha, growth_rate)  # Discretization function with growth rate for exponential discretization.
         self.gamma = gamma
         self.reward_dim = reward_dim
         self.time_horizon = time_horizon
@@ -24,10 +24,20 @@ class RAValueIteration:
         self.save_path = save_path
     
     def initialize(self):
-        min, max = 0, np.floor(self.time_horizon / self.discre_alpha) * self.discre_alpha
-        self.discre_grid = np.arange(min, max + self.discre_alpha, self.discre_alpha)
-        self.init_Racc = [np.asarray(r) for r in list(itertools.product(self.discre_grid, repeat=self.reward_dim))]
-        self.encode_Racc_dict = {str(r): i for i, r in enumerate(self.init_Racc)}
+        # min, max = 0, np.floor(self.time_horizon / self.discre_alpha) * self.discre_alpha
+        # self.discre_grid = np.arange(min, max + self.discre_alpha, self.discre_alpha)
+
+        # Calculate maximum possible reward accumulation for exponential discretization
+        if self.gamma == 1:  # Special case where gamma is 1, just multiply max reward by the number of steps
+            max_reward = self.time_horizon
+        else:
+            # Calculate the sum of the geometric series
+            sum_of_discounts = (1 - self.gamma ** self.time_horizon) / (1 - self.gamma)
+            max_reward = sum_of_discounts
+        max_discrete = self.discre_func(max_reward)
+        self.discre_grid = np.unique(np.array([self.discre_func(alpha * self.discre_alpha) for alpha in range(int(np.ceil(max_discrete / self.discre_alpha)))]))
+        self.init_Racc = [np.asarray(r) for r in list(itertools.product(self.discre_grid, repeat=self.reward_dim))] # All possible reward accumulations.
+        self.encode_Racc_dict = {str(r): i for i, r in enumerate(self.init_Racc)} # Encoding of reward accumulations.
         
         # assert all([len(x) == self.reward_dim for x in self.init_Racc]), "Invalid reward accumulation"
         
@@ -47,6 +57,7 @@ class RAValueIteration:
                 self.V[state, Racc_code, 0] = self.welfare_func(Racc)
     
     def encode_Racc(self, Racc):
+        # Encode the accumulated reward for indexing.
         assert hasattr(self, "encode_Racc_dict"), "need to have initialize accumulated reward to begin with"
         return self.encode_Racc_dict[str(Racc)]
         
@@ -54,11 +65,15 @@ class RAValueIteration:
         self.initialize()
         
         for t in tqdm(range(1, self.time_horizon + 1), desc="Training..."):
-            min, max = 0, np.floor( (self.time_horizon - t) / self.discre_alpha ) * self.discre_alpha
-            time_grid = np.arange(min, max + self.discre_alpha, self.discre_alpha)
-            curr_Racc = [np.asarray(r) for r in list(itertools.product(time_grid, repeat=self.reward_dim))]
+            # min, max = 0, np.floor( (self.time_horizon - t) / self.discre_alpha ) * self.discre_alpha
+            # time_grid = np.arange(min, max + self.discre_alpha, self.discre_alpha)
+            # curr_Racc = [np.asarray(r) for r in list(itertools.product(time_grid, repeat=self.reward_dim))] # Current possible rewards.
             # assert all([len(x) == self.reward_dim for x in curr_Racc]), "Invalid reward accumulation"
-            
+
+            # Use the discretized grid from initialization that accounts for exponential growth
+            time_grid = self.discre_grid[self.discre_grid <= (self.time_horizon - t) * self.discre_alpha]
+
+            curr_Racc = [np.asarray(r) for r in list(itertools.product(time_grid, repeat=self.reward_dim))] # Adjusted for exponential growth
             for Racc in tqdm(curr_Racc, desc="Iterating Racc..."):
                 Racc_code = self.encode_Racc(Racc)
                 
@@ -66,7 +81,7 @@ class RAValueIteration:
                     transition_prob, reward_arr, next_state_arr = self.env.get_transition(state)        # vectorized, in dimensionality of the action space
                     
                     next_Racc = Racc + np.power(self.gamma, self.time_horizon - t) * reward_arr     # use broadcasting
-                    next_Racc_discretized = self.discre_func(next_Racc)
+                    next_Racc_discretized = self.discre_func(next_Racc) # Discretize next rewards.
                     next_Racc_code = [self.encode_Racc(d) for d in next_Racc_discretized]
                     
                     all_V = transition_prob * self.V[next_state_arr.astype(int), next_Racc_code, t - 1]

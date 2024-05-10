@@ -7,13 +7,19 @@ import argparse
 
 
 class DiscreFunc:
-    def __init__(self, discre_alpha):
-        self.discre_alpha = discre_alpha
-    
-    def __call__(self, x):
-        assert isinstance(x, np.ndarray), "x must be a numpy array"
-        return np.floor(x / self.discre_alpha) * self.discre_alpha
+    def __init__(self, alpha, growth_rate=1.001):
+        self.alpha = alpha
+        self.growth_rate = growth_rate  # Growth rate for the exponential increase in the interval size.
 
+    def __call__(self, x):
+        if not isinstance(x, np.ndarray):
+            x = np.array([x])  # Convert scalar to numpy array if not already an array
+        assert isinstance(x, np.ndarray), "x must be a numpy array"
+        scaled_x = x / self.alpha
+        indices = np.floor(np.log1p(scaled_x * (self.growth_rate - 1)) / np.log(self.growth_rate)).astype(int)
+        # Calculate the accumulated discretization bins
+        bins = self.alpha * (self.growth_rate ** indices - 1) / (self.growth_rate - 1)
+        return bins
 
 class WelfareFunc:
     def __init__(self, welfare_func_name, nsw_lambda=None, p=None):
