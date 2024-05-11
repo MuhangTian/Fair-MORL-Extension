@@ -16,7 +16,7 @@ class DiscreFunc:
             x = np.array([x])  # Convert scalar to numpy array if not already an array
         assert isinstance(x, np.ndarray), "x must be a numpy array"
         scaled_x = x / self.alpha
-        indices = np.floor(np.log1p(scaled_x * (self.growth_rate - 1)) / np.log(self.growth_rate)).astype(int)
+        indices = np.round(np.log1p(scaled_x * (self.growth_rate - 1)) / np.log(self.growth_rate)).astype(int)
         # Calculate the accumulated discretization bins
         bins = self.alpha * (self.growth_rate ** indices - 1) / (self.growth_rate - 1)
         return bins
@@ -83,3 +83,12 @@ def is_file_not_on_disk(file_name):
         raise argparse.ArgumentTypeError("the file %s already exists on disk" % file_name)
     else:
         return file_name
+
+if __name__ == "__main__":
+    alpha = 0.8
+    func = DiscreFunc(alpha)
+    test_values = np.array([50, 100, 150, 200, 250, 300, 350])
+    
+    result = func(test_values)
+    print("Input Values:", test_values)
+    print("Discretized Output:", result)

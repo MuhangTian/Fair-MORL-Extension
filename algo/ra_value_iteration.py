@@ -67,13 +67,13 @@ class RAValueIteration:
         for t in tqdm(range(1, self.time_horizon + 1), desc="Training..."):
             # min, max = 0, np.floor( (self.time_horizon - t) / self.discre_alpha ) * self.discre_alpha
             # time_grid = np.arange(min, max + self.discre_alpha, self.discre_alpha)
-            # curr_Racc = [np.asarray(r) for r in list(itertools.product(time_grid, repeat=self.reward_dim))] # Current possible rewards.
-            # assert all([len(x) == self.reward_dim for x in curr_Racc]), "Invalid reward accumulation"
 
             # Use the discretized grid from initialization that accounts for exponential growth
             time_grid = self.discre_grid[self.discre_grid <= (self.time_horizon - t) * self.discre_alpha]
 
-            curr_Racc = [np.asarray(r) for r in list(itertools.product(time_grid, repeat=self.reward_dim))] # Adjusted for exponential growth
+            curr_Racc = [np.asarray(r) for r in list(itertools.product(time_grid, repeat=self.reward_dim))] # Current possible rewards.
+            # assert all([len(x) == self.reward_dim for x in curr_Racc]), "Invalid reward accumulation"
+
             for Racc in tqdm(curr_Racc, desc="Iterating Racc..."):
                 Racc_code = self.encode_Racc(Racc)
                 
