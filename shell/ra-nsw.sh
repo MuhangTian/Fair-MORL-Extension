@@ -9,7 +9,7 @@
 # # SBATCH --mail-type=FAIL
 
 export size=10
-export num_locs=2
+export num_locs=3
 export time_horizon=100
 export discre_alpha=0.8
 export growth_rate=1.001

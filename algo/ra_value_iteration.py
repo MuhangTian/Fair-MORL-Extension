@@ -32,7 +32,7 @@ class RAValueIteration:
             max_reward = self.time_horizon/2
         else:
             # Calculate the sum of the geometric series
-            sum_of_discounts = (1 - self.gamma ** (self.time_horizon/2)) / (1 - self.gamma)
+            sum_of_discounts = (1 - self.gamma ** (self.time_horizon/5)) / (1 - self.gamma)
             max_reward = sum_of_discounts
         max_discrete = self.discre_func(max_reward)
         self.discre_grid = np.unique(np.array([self.discre_func(alpha * self.discre_alpha) for alpha in range(int(np.ceil(max_discrete / self.discre_alpha)))]))
@@ -76,7 +76,7 @@ class RAValueIteration:
             # Calculate the sum of the geometric series for the remaining timesteps
             remaining_steps = self.time_horizon - t
             max_accumulated_discounted_reward = (1 - self.gamma ** (remaining_steps + 1)) / (1 - self.gamma)
-            max_possible_reward = np.round(max_accumulated_discounted_reward / self.discre_alpha) * self.discre_alpha / 2
+            max_possible_reward = np.round(max_accumulated_discounted_reward / self.discre_alpha) * self.discre_alpha / 5
             
             # Filter the discretization grid
             time_grid = self.discre_grid[self.discre_grid <= max_possible_reward]
