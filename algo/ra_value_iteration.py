@@ -29,10 +29,10 @@ class RAValueIteration:
 
         # Calculate maximum possible reward accumulation for exponential discretization
         if self.gamma == 1:  # Special case where gamma is 1, just multiply max reward by the number of steps
-            max_reward = self.time_horizon
+            max_reward = self.time_horizon/2
         else:
             # Calculate the sum of the geometric series
-            sum_of_discounts = (1 - self.gamma ** self.time_horizon) / (1 - self.gamma)
+            sum_of_discounts = (1 - self.gamma ** (self.time_horizon/2)) / (1 - self.gamma)
             max_reward = sum_of_discounts
         max_discrete = self.discre_func(max_reward)
         self.discre_grid = np.unique(np.array([self.discre_func(alpha * self.discre_alpha) for alpha in range(int(np.ceil(max_discrete / self.discre_alpha)))]))
@@ -49,7 +49,11 @@ class RAValueIteration:
         self.Pi = self.V.copy()
         
         if self.wdb:
-            wandb.log({"memory (mb)": round(getsizeof(self.V) / 1024 / 1024, 2)})
+            wandb.log({
+                "memory (mb)": round(getsizeof(self.V) / 1024 / 1024, 2),
+                "state_space_size": self.env.observation_space.n,
+                "discre_grid_size": len(self.discre_grid)
+            })
         
         for Racc in tqdm(self.init_Racc, desc="Initializing..."):
             for state in range(self.env.observation_space.n):
@@ -69,8 +73,13 @@ class RAValueIteration:
             # time_grid = np.arange(min, max + self.discre_alpha, self.discre_alpha)
 
             # Use the discretized grid from initialization that accounts for exponential growth
-            time_grid = self.discre_grid[self.discre_grid <= (self.time_horizon - t) * self.discre_alpha]
-
+            # Calculate the sum of the geometric series for the remaining timesteps
+            remaining_steps = self.time_horizon - t
+            max_accumulated_discounted_reward = (1 - self.gamma ** (remaining_steps + 1)) / (1 - self.gamma)
+            max_possible_reward = np.round(max_accumulated_discounted_reward / self.discre_alpha) * self.discre_alpha / 2
+            
+            # Filter the discretization grid
+            time_grid = self.discre_grid[self.discre_grid <= max_possible_reward]
             curr_Racc = [np.asarray(r) for r in list(itertools.product(time_grid, repeat=self.reward_dim))] # Current possible rewards.
             # assert all([len(x) == self.reward_dim for x in curr_Racc]), "Invalid reward accumulation"
 

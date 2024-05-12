@@ -8,7 +8,7 @@
 # # SBATCH --mail-type=END
 # # SBATCH --mail-type=FAIL
 
-export size=4
+export size=10
 export num_locs=2
 export time_horizon=100
 export discre_alpha=0.8
