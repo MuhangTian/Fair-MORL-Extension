@@ -29,11 +29,11 @@ class RAValueIteration:
 
         # Calculate maximum possible reward accumulation for exponential discretization
         if self.gamma == 1:  # Special case where gamma is 1, just multiply max reward by the number of steps
-            max_reward = self.time_horizon/15
+            max_reward = self.time_horizon/14
             # max_reward = self.time_horizon
         else:
             # Calculate the sum of the geometric series
-            sum_of_discounts = (1 - self.gamma ** (self.time_horizon/15)) / (1 - self.gamma)
+            sum_of_discounts = (1 - self.gamma ** (self.time_horizon/14)) / (1 - self.gamma)
             # sum_of_discounts = (1 - self.gamma ** (self.time_horizon)) / (1 - self.gamma)
             max_reward = sum_of_discounts
         max_discrete = self.discre_func(max_reward)
