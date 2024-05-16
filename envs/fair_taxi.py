@@ -116,6 +116,8 @@ class Fair_Taxi_MOMDP(gym.Env):
         
         if taxi_loc == None and pass_dest == None:   # when no parameters
             self.taxi_loc = self.np_random.integers(0, self.size, size=2)   # random taxi spawn location
+            # self.taxi_loc[0], self.taxi_loc[1] = 1, 0 # for testing
+            print(f"Taxi spawning location: {self.taxi_loc}")
             rand_idx = np.random.random_integers(0, len(self.dest_coords))    # random passenger spawn location
             # self.pass_dest = None
             # self.pass_idx = None
