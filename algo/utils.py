@@ -22,10 +22,11 @@ class DiscreFunc:
         return bins
 
 class WelfareFunc:
-    def __init__(self, welfare_func_name, nsw_lambda=None, p=None):
+    def __init__(self, welfare_func_name, nsw_lambda=None, p=None, threshold=None):
         self.welfare_func_name = welfare_func_name
         self.nsw_lambda = nsw_lambda
         self.p = p
+        self.threshold = threshold
         self.check()
     
     def check(self):
@@ -33,6 +34,8 @@ class WelfareFunc:
             assert self.nsw_lambda is not None, "nsw_lambda must be specified for nsw welfare function"
         elif self.welfare_func_name == "p-welfare":
             assert self.p is not None, "p must be specified for p-welfare function"
+        elif self.welfare_func_name == "resource_damage_scalarization":
+            assert self.threshold is not None, "threshold must be specified for resource_damage_scalarization function"
     
     def __call__(self, x):
         assert isinstance(x, np.ndarray), "x must be a numpy array"
@@ -47,12 +50,21 @@ class WelfareFunc:
             return np.sum(np.log(x))
         elif self.welfare_func_name == "p-welfare":
             return np.power(np.mean(x ** self.p), 1 / self.p)
+        elif self.welfare_func_name == "resource_damage_scalarization":
+            return self.resource_damage_scalarization(x)
         else:
             raise ValueError("Invalid welfare function name")
     
     def nash_welfare(self, x):
         assert isinstance(x, np.ndarray), "x must be a numpy array"
         return np.power(np.prod(x), 1 / len(x))
+
+    def resource_damage_scalarization(self, x):
+        assert isinstance(x, np.ndarray), "x must be a numpy array"
+        assert len(x) == 2, "x must have length 2 (resources_collected, damage_taken)"
+        R = x[0]
+        D = x[1]
+        return R - max(0, (self.threshold - D) ** 3)
 
 def is_file_on_disk(file_name):
     if not os.path.isfile(file_name):
