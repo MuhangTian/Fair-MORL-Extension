@@ -9,15 +9,16 @@ from algo.utils import DiscreFunc, WelfareFunc
 
 
 class RAValueIteration:
-    def __init__(self, env, discre_alpha, growth_rate, gamma, reward_dim, time_horizon, welfare_func_name, nsw_lambda, save_path, seed=1122, p=None, wdb=False) -> None:
+    def __init__(self, env, discre_alpha, growth_rate, gamma, reward_dim, time_horizon, welfare_func_name, nsw_lambda, save_path, seed=1122, p=None, threshold=5, wdb=False, scaling_factor=1) -> None:
         self.env = env
         self.welfare_func_name = "nash welfare" if welfare_func_name == "nash-welfare" else welfare_func_name
         self.discre_alpha = discre_alpha # Discretization factor for accumulated rewards.
         self.discre_func = DiscreFunc(discre_alpha, growth_rate)  # Discretization function with growth rate for exponential discretization.
         self.gamma = gamma
+        self.scaling_factor = scaling_factor
         self.reward_dim = reward_dim
         self.time_horizon = time_horizon
-        self.welfare_func = WelfareFunc(welfare_func_name, nsw_lambda, p)
+        self.welfare_func = WelfareFunc(welfare_func_name, nsw_lambda, p, threshold)
         self.training_complete = False
         self.seed = seed
         self.wdb = wdb
@@ -29,12 +30,10 @@ class RAValueIteration:
 
         # Calculate maximum possible reward accumulation for exponential discretization
         if self.gamma == 1:  # Special case where gamma is 1, just multiply max reward by the number of steps
-            max_reward = self.time_horizon/14
-            # max_reward = self.time_horizon
+            max_reward = self.time_horizon/self.scaling_factor
         else:
             # Calculate the sum of the geometric series
-            sum_of_discounts = (1 - self.gamma ** (self.time_horizon/14)) / (1 - self.gamma)
-            # sum_of_discounts = (1 - self.gamma ** (self.time_horizon)) / (1 - self.gamma)
+            sum_of_discounts = (1 - self.gamma ** (self.time_horizon/self.scaling_factor)) / (1 - self.gamma)
             max_reward = sum_of_discounts
         max_discrete = self.discre_func(max_reward)
 
@@ -127,8 +126,12 @@ class RAValueIteration:
             action = self.Pi[state, Racc_code, t]
             
             next, reward, done = self.env.step(action)
+            self.env.render()
+            decoded_pos, decoded_status = self.env.decode_state(next)
+            print(f"Decoded Position: {decoded_pos}, Decoded Resource Status: {decoded_status}")
             state = next
             Racc += np.power(self.gamma, c) * reward
+            print(f"Accumulated Reward: {Racc}")
             
             c += 1
         
@@ -136,10 +139,10 @@ class RAValueIteration:
             if self.wdb:
                 wandb.log({self.welfare_func_name: self.welfare_func.nash_welfare(Racc)})
             print(f"{self.welfare_func_name}: {self.welfare_func.nash_welfare(Racc)}, Racc: {Racc}")
-        elif self.welfare_func_name in ["p-welfare", "egalitarian"]:
+        elif self.welfare_func_name in ["p-welfare", "egalitarian", "resource_damage_scalarization"]:
             if self.wdb:
                 wandb.log({self.welfare_func_name: self.welfare_func(Racc)})
-            print(f"{self.welfare_func_name}: {self.welfare_func(Racc)}, Racc: {Racc}")   
+            print(f"{self.welfare_func_name}: {self.welfare_func(Racc)}, Racc: {Racc}")
             
         if final:
             self.Racc_record = Racc

@@ -22,7 +22,7 @@ class DiscreFunc:
         return bins
 
 class WelfareFunc:
-    def __init__(self, welfare_func_name, nsw_lambda=None, p=None, threshold=None):
+    def __init__(self, welfare_func_name, nsw_lambda=None, p=None, threshold=5):
         self.welfare_func_name = welfare_func_name
         self.nsw_lambda = nsw_lambda
         self.p = p

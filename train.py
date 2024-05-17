@@ -8,6 +8,7 @@ from algo.welfare_q import WelfareQ
 from algo.mixture import MixturePolicy
 from algo.linear_scalarize import LinearScalarize
 from envs.fair_taxi import Fair_Taxi_MOMDP
+from envs.Resource_Gathering import ResourceGatheringEnv
 from algo.utils import is_positive_integer, is_positive_float, is_file_not_on_disk, is_within_zero_one_float
 
 
@@ -38,13 +39,14 @@ def get_setting(size, num_locs):
 
 def parse_arguments():
     prs = argparse.ArgumentParser()
+    prs.add_argument('--env_name', choices=["Fair_Taxi_MOMDP", "ResourceGatheringEnv"], required=True)
     prs.add_argument('--size', type=is_positive_integer, default=4)
     prs.add_argument('--num_locs', type=is_positive_integer, default=2)
     prs.add_argument('--time_horizon', type=is_positive_integer, default=1)
     prs.add_argument('--discre_alpha', type=is_positive_float, default=0.5)
     prs.add_argument("--gamma", type=is_within_zero_one_float, default=0.999)
     prs.add_argument("--growth_rate", type=is_positive_float, default=1.001)
-    prs.add_argument("--welfare_func_name", choices=["egalitarian", "nash-welfare", "p-welfare"], default="nash-welfare")
+    prs.add_argument("--welfare_func_name", choices=["egalitarian", "nash-welfare", "p-welfare", "resource_damage_scalarization"], default="nash-welfare")
     prs.add_argument("--nsw_lambda", type=is_positive_float, default=1e-4)
     prs.add_argument("--wandb", action="store_true")
     prs.add_argument("--save_path", type=is_file_not_on_disk, default="results/trial.npz")
@@ -55,6 +57,8 @@ def parse_arguments():
     prs.add_argument("--init_val", type=float, default=0.0)
     prs.add_argument("--dim_factor", type=is_positive_float, default=0.9)
     prs.add_argument("--p", type=float, default=0.5)
+    prs.add_argument("--threshold", type=is_positive_float, default=5)  # For resource_damage_scalarization
+    prs.add_argument("--scaling_factor", type=int, default=1) # scaling factor for accumuated reward initialization in RA-Value Iteration, should be 14 for taxi
     prs.add_argument("--project", type=str, default="RA-Iteration")
     prs.add_argument("--seed", type=int, default=1122)
     return prs.parse_args()
@@ -67,8 +71,11 @@ def init_if_wandb(args):
 
 if __name__ == "__main__":
     args = parse_arguments()
-    size, loc_coords, dest_coords = get_setting(args.size, args.num_locs)
-    env = Fair_Taxi_MOMDP(size, loc_coords, dest_coords, args.time_horizon, '', 15)
+    if args.env_name == "Fair_Taxi_MOMDP":
+        size, loc_coords, dest_coords = get_setting(args.size, args.num_locs)
+        env = Fair_Taxi_MOMDP(size, loc_coords, dest_coords, args.time_horizon, '', 15)
+    elif args.env_name == "ResourceGatheringEnv":
+        env = ResourceGatheringEnv(grid_size=(args.size, args.size))
     
     np.random.seed(args.seed)
     env.seed(args.seed)
@@ -88,6 +95,8 @@ if __name__ == "__main__":
             wdb = args.wandb,
             save_path = args.save_path,
             p = args.p,
+            threshold = args.threshold,  # Pass threshold for resource_damage_scalarization
+            scaling_factor = args.scaling_factor
         )
     elif args.method == "welfare_q":
         algo = WelfareQ(

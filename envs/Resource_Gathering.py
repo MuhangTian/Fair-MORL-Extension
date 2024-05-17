@@ -1,9 +1,12 @@
 import gym
 from gym import spaces
 import numpy as np
+import random
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 
 class ResourceGatheringEnv(gym.Env):
-    def __init__(self, grid_size=(5, 5), num_resources=3):
+    def __init__(self, grid_size=(5, 5), num_resources=8):
         super(ResourceGatheringEnv, self).__init__()
         self.grid_size = grid_size
         self.num_resources = num_resources
@@ -17,9 +20,19 @@ class ResourceGatheringEnv(gym.Env):
         # Observation space: Discrete space of all possible states
         self.observation_space = spaces.Discrete(self.total_states)
 
-        # Fixed positions for resources and enemies
-        self.resource_positions = [(1, 1), (3, 3), (4, 0)]
-        self.enemy_positions = [(0, 4), (4, 4)]
+        # Generate 8 unique resource positions
+        self.resource_positions = []
+        while len(self.resource_positions) < num_resources:
+            position = (random.randint(0, 9), random.randint(0, 9))
+            if position not in self.resource_positions:
+                self.resource_positions.append(position)
+        
+        # Generate 20 unique enemy positions
+        self.enemy_positions = []
+        while len(self.enemy_positions) < grid_size[0]*grid_size[1]/5:
+            position = (random.randint(0, 9), random.randint(0, 9))
+            if position not in self.enemy_positions and position not in self.resource_positions:
+                self.enemy_positions.append(position)
 
         self.reset()
 
@@ -28,6 +41,8 @@ class ResourceGatheringEnv(gym.Env):
         
         # Initialize agent position
         self.agent_pos = [self.np_random.randint(self.grid_size[0]), self.np_random.randint(self.grid_size[1])]
+
+        print(f"Agent spawning location: {self.agent_pos}")
         
         # Initialize resource status (1 = present, 0 = collected)
         self.resources_status = np.ones(self.num_resources, dtype=np.int32)
@@ -66,21 +81,51 @@ class ResourceGatheringEnv(gym.Env):
     def compute_reward(self):
         agent_pos_tuple = tuple(self.agent_pos)
 
+        reward = np.array([0, 0])  # Initialize reward as [0, 0]
+
         # Check if agent is on a resource
         if agent_pos_tuple in self.resource_positions:
             index = self.resource_positions.index(agent_pos_tuple)
             if self.resources_status[index] == 1:
                 self.collected_resources += 1
+                reward[0] = 1  # Collecting a resource
                 self.resources_status[index] = 0
 
         # Check if agent is on an enemy
         if agent_pos_tuple in self.enemy_positions:
             self.damage_taken += 1
+            reward[1] = 1  # Encountering an enemy
 
-        return np.array([self.collected_resources, self.damage_taken])
+        return reward
 
     def render(self, mode='human'):
-        print(f"Agent Position: {self.agent_pos}, Resources Collected: {self.collected_resources}, Damage Taken: {self.damage_taken}")
+        fig, ax = plt.subplots()
+        ax.set_xlim(0, self.grid_size[1])
+        ax.set_ylim(0, self.grid_size[0])
+        ax.set_xticks(np.arange(0, self.grid_size[1], 1))
+        ax.set_yticks(np.arange(0, self.grid_size[0], 1))
+        ax.grid(True)
+
+        # Draw agent
+        ax.add_patch(patches.Circle((self.agent_pos[1] + 0.5, self.grid_size[0] - self.agent_pos[0] - 0.5), 0.3, color='blue'))
+
+        # Draw resources
+        for idx, pos in enumerate(self.resource_positions):
+            if self.resources_status[idx] == 1:
+                ax.add_patch(patches.Rectangle((pos[1], self.grid_size[0] - pos[0] - 1), 1, 1, edgecolor='green', facecolor='none'))
+
+        # Draw enemies
+        for pos in self.enemy_positions:
+            ax.add_patch(patches.Rectangle((pos[1], self.grid_size[0] - pos[0] - 1), 1, 1, edgecolor='red', facecolor='none'))
+
+        # Set labels
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+        ax.set_xticks(np.arange(0, self.grid_size[1], 1), minor=True)
+        ax.set_yticks(np.arange(0, self.grid_size[0], 1), minor=True)
+        ax.grid(which='both')
+
+        plt.show()
 
     def decode_state(self, state):
         # Extract resource status
@@ -170,8 +215,8 @@ if __name__ == "__main__":
         action = env.action_space.sample()
         state, reward, done = env.step(action)
         env.render()
-        decoded_pos, decoded_status = env.decode_state(state)
-        print(f"Decoded Position: {decoded_pos}, Decoded Resource Status: {decoded_status}")
+        # decoded_pos, decoded_status = env.decode_state(state)
+        # print(f"Decoded Position: {decoded_pos}, Decoded Resource Status: {decoded_status}")
 
         # Test get_transition function
         transition_prob, reward_arr, next_state_arr = env.get_transition(state)
