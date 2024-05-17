@@ -9,17 +9,18 @@
 # # SBATCH --mail-type=FAIL
 
 export env_name=ResourceGatheringEnv
-export size=10
+export size=5
 export num_locs=2
-export time_horizon=100
+export time_horizon=10
 export discre_alpha=0.8
 export growth_rate=1.001
 export gamma=0.999
 export welfare_func_name=resource_damage_scalarization
-export threshold=5
+export threshold=0
 export save_path=$1
 export method=ra_value_iteration
 export scaling_factor=1
+export num_resources=3
 
 python ../train.py \
     --env_name $env_name \
@@ -34,4 +35,5 @@ python ../train.py \
     --save_path $save_path \
     --method $method \
     --scaling_factor $scaling_factor \
+    --num_resources $num_resources \
     --wandb \

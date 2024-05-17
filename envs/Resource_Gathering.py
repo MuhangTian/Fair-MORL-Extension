@@ -4,9 +4,11 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from io import BytesIO
+from PIL import Image
 
 class ResourceGatheringEnv(gym.Env):
-    def __init__(self, grid_size=(5, 5), num_resources=8):
+    def __init__(self, grid_size=(5, 5), num_resources=3):
         super(ResourceGatheringEnv, self).__init__()
         self.grid_size = grid_size
         self.num_resources = num_resources
@@ -20,17 +22,17 @@ class ResourceGatheringEnv(gym.Env):
         # Observation space: Discrete space of all possible states
         self.observation_space = spaces.Discrete(self.total_states)
 
-        # Generate 8 unique resource positions
+        # Generate unique resource positions
         self.resource_positions = []
         while len(self.resource_positions) < num_resources:
-            position = (random.randint(0, 9), random.randint(0, 9))
+            position = (random.randint(0, grid_size[0]-1), random.randint(0, grid_size[1]-1))
             if position not in self.resource_positions:
                 self.resource_positions.append(position)
         
-        # Generate 20 unique enemy positions
+        # Generate unique enemy positions
         self.enemy_positions = []
         while len(self.enemy_positions) < grid_size[0]*grid_size[1]/5:
-            position = (random.randint(0, 9), random.randint(0, 9))
+            position = (random.randint(0, grid_size[0]-1), random.randint(0, grid_size[1]-1))
             if position not in self.enemy_positions and position not in self.resource_positions:
                 self.enemy_positions.append(position)
 
@@ -98,34 +100,40 @@ class ResourceGatheringEnv(gym.Env):
 
         return reward
 
-    def render(self, mode='human'):
+    def render(self, mode='human', save_path='./env_render.png'):
         fig, ax = plt.subplots()
         ax.set_xlim(0, self.grid_size[1])
         ax.set_ylim(0, self.grid_size[0])
-        ax.set_xticks(np.arange(0, self.grid_size[1], 1))
-        ax.set_yticks(np.arange(0, self.grid_size[0], 1))
+        ax.set_xticks(np.arange(0, self.grid_size[1] + 1, 1))
+        ax.set_yticks(np.arange(0, self.grid_size[0] + 1, 1))
         ax.grid(True)
 
-        # Draw agent
-        ax.add_patch(patches.Circle((self.agent_pos[1] + 0.5, self.grid_size[0] - self.agent_pos[0] - 0.5), 0.3, color='blue'))
+        # Draw grid
+        for x in range(self.grid_size[1]):
+            for y in range(self.grid_size[0]):
+                ax.add_patch(patches.Rectangle((x, self.grid_size[0] - y - 1), 1, 1, edgecolor='black', facecolor='none'))
 
         # Draw resources
         for idx, pos in enumerate(self.resource_positions):
             if self.resources_status[idx] == 1:
-                ax.add_patch(patches.Rectangle((pos[1], self.grid_size[0] - pos[0] - 1), 1, 1, edgecolor='green', facecolor='none'))
+                ax.add_patch(patches.Rectangle((pos[1], self.grid_size[0] - pos[0] - 1), 1, 1, color='green'))
 
         # Draw enemies
         for pos in self.enemy_positions:
-            ax.add_patch(patches.Rectangle((pos[1], self.grid_size[0] - pos[0] - 1), 1, 1, edgecolor='red', facecolor='none'))
+            ax.add_patch(patches.Rectangle((pos[1], self.grid_size[0] - pos[0] - 1), 1, 1, color='red'))
+
+        # Draw agent last to ensure it's on top
+        ax.add_patch(patches.Rectangle((self.agent_pos[1], self.grid_size[0] - self.agent_pos[0] - 1), 1, 1, edgecolor='black', facecolor='blue'))
 
         # Set labels
         ax.set_xticklabels([])
         ax.set_yticklabels([])
-        ax.set_xticks(np.arange(0, self.grid_size[1], 1), minor=True)
-        ax.set_yticks(np.arange(0, self.grid_size[0], 1), minor=True)
+        ax.set_xticks(np.arange(0, self.grid_size[1] + 1, 1), minor=True)
+        ax.set_yticks(np.arange(0, self.grid_size[0] + 1, 1), minor=True)
         ax.grid(which='both')
 
-        plt.show()
+        plt.savefig(save_path, format='png')
+        plt.close(fig)
 
     def decode_state(self, state):
         # Extract resource status
@@ -210,17 +218,18 @@ class ResourceGatheringEnv(gym.Env):
 if __name__ == "__main__":
     # To use the environment and test decoding
     env = ResourceGatheringEnv(grid_size=(5, 5), num_resources=3)
-    state = env.reset(seed=42)  # Reset with a specific seed
-    for _ in range(10):  # Simulate a few steps
+    # state = env.reset(seed=42)  # Reset with a specific seed
+    for i in range(10):  # Simulate a few steps
         action = env.action_space.sample()
         state, reward, done = env.step(action)
-        env.render()
+        img_path = f'./env_render_{i}.png'
+        env.render(save_path=img_path)
         # decoded_pos, decoded_status = env.decode_state(state)
         # print(f"Decoded Position: {decoded_pos}, Decoded Resource Status: {decoded_status}")
 
         # Test get_transition function
-        transition_prob, reward_arr, next_state_arr = env.get_transition(state)
-        print(f"Transition Probabilities: {transition_prob}")
-        print(f"Rewards: {reward_arr}")
-        print(f"Next States: {next_state_arr}")
+        # transition_prob, reward_arr, next_state_arr = env.get_transition(state)
+        # print(f"Transition Probabilities: {transition_prob}")
+        # print(f"Rewards: {reward_arr}")
+        # print(f"Next States: {next_state_arr}")
     env.close()

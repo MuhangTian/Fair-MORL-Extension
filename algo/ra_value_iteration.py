@@ -2,11 +2,16 @@ import itertools
 
 import numpy as np
 from tqdm import tqdm
+import sys
 from sys import getsizeof
 
 import wandb
 from algo.utils import DiscreFunc, WelfareFunc
 
+sys.path.insert(0, '../envs')
+import envs
+
+import os
 
 class RAValueIteration:
     def __init__(self, env, discre_alpha, growth_rate, gamma, reward_dim, time_horizon, welfare_func_name, nsw_lambda, save_path, seed=1122, p=None, threshold=5, wdb=False, scaling_factor=1) -> None:
@@ -126,9 +131,14 @@ class RAValueIteration:
             action = self.Pi[state, Racc_code, t]
             
             next, reward, done = self.env.step(action)
-            self.env.render()
-            decoded_pos, decoded_status = self.env.decode_state(next)
-            print(f"Decoded Position: {decoded_pos}, Decoded Resource Status: {decoded_status}")
+            if isinstance(self.env, envs.Resource_Gathering.ResourceGatheringEnv):
+                # Ensure the renders directory exists within the specified save path
+                renders_path = self.save_path + '/renders'
+                os.makedirs(renders_path, exist_ok=True)
+                img_path = self.save_path + f'/renders/env_render_{self.time_horizon-t}.png'
+                self.env.render(save_path=img_path)
+                # decoded_pos, decoded_status = self.env.decode_state(next)
+                # print(f"Decoded Position: {decoded_pos}, Decoded Resource Status: {decoded_status}")
             state = next
             Racc += np.power(self.gamma, c) * reward
             print(f"Accumulated Reward: {Racc}")
