@@ -64,7 +64,7 @@ class WelfareFunc:
         assert len(x) == 2, "x must have length 2 (resources_collected, damage_taken)"
         R = x[0]
         D = x[1]
-        return R - max(0, (self.threshold - D) ** 3)
+        return R - max(0, (D - self.threshold) ** 3)
 
 def is_file_on_disk(file_name):
     if not os.path.isfile(file_name):
@@ -97,10 +97,17 @@ def is_file_not_on_disk(file_name):
         return file_name
 
 if __name__ == "__main__":
-    alpha = 0.8
-    func = DiscreFunc(alpha)
-    test_values = np.array([50, 100, 150, 200, 250, 300, 350])
+    # alpha = 0.8
+    # func = DiscreFunc(alpha)
+    # test_values = np.array([50, 100, 150, 200, 250, 300, 350])
     
-    result = func(test_values)
-    print("Input Values:", test_values)
-    print("Discretized Output:", result)
+    # result = func(test_values)
+    # print("Input Values:", test_values)
+    # print("Discretized Output:", result)
+
+    # Example usage
+    x = np.array([4, 0])  # Example reward vector [resources_collected, damage_taken]
+    threshold = 2  # Example threshold
+    wf = WelfareFunc(welfare_func_name="resource_damage_scalarization", threshold=threshold)
+    result = wf(x)
+    print(f"Scalarized reward: {result}")
