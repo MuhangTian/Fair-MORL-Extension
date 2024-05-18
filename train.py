@@ -44,7 +44,7 @@ def parse_arguments():
     prs.add_argument('--num_locs', type=is_positive_integer, default=2)
     prs.add_argument('--time_horizon', type=is_positive_integer, default=1)
     prs.add_argument('--discre_alpha', type=is_positive_float, default=0.5)
-    prs.add_argument("--gamma", type=is_within_zero_one_float, default=0.999)
+    prs.add_argument("--gamma", type=is_positive_float, default=0.999)
     prs.add_argument("--growth_rate", type=is_positive_float, default=1.001)
     prs.add_argument("--welfare_func_name", choices=["egalitarian", "nash-welfare", "p-welfare", "resource_damage_scalarization"], default="nash-welfare")
     prs.add_argument("--nsw_lambda", type=is_positive_float, default=1e-4)
@@ -57,7 +57,7 @@ def parse_arguments():
     prs.add_argument("--init_val", type=float, default=0.0)
     prs.add_argument("--dim_factor", type=is_positive_float, default=0.9)
     prs.add_argument("--p", type=float, default=0.5)
-    prs.add_argument("--threshold", type=int, default=5)  # For resource_damage_scalarization
+    prs.add_argument("--threshold", type=is_positive_float, default=0.5)  # For resource_damage_scalarization
     prs.add_argument("--scaling_factor", type=int, default=1) # scaling factor for accumuated reward initialization in RA-Value Iteration, should be 14 for taxi
     prs.add_argument("--num_resources", type=int, default=3) # number of resources in Resource Gathering
     prs.add_argument("--project", type=str, default="RA-Iteration")
@@ -76,7 +76,7 @@ if __name__ == "__main__":
         size, loc_coords, dest_coords = get_setting(args.size, args.num_locs)
         env = Fair_Taxi_MOMDP(size, loc_coords, dest_coords, args.time_horizon, '', 15)
     elif args.env_name == "ResourceGatheringEnv":
-        env = ResourceGatheringEnv(grid_size=(args.size, args.size),num_resources=args.num_resources)
+        env = ResourceGatheringEnv(grid_size=(args.size, args.size),num_resources=args.num_resources,seed=args.seed)
     
     np.random.seed(args.seed)
     env.seed(args.seed)

@@ -6,12 +6,12 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 class ResourceGatheringEnv(gym.Env):
-    def __init__(self, grid_size=(5, 5), num_resources=3):
-        super(ResourceGatheringEnv, self).__init__()
+    def __init__(self, grid_size=(5, 5), num_resources=3, seed=None):
+        super(ResourceGatheringEnv, self).__init__(seed=seed)
         self.grid_size = grid_size
         self.num_resources = num_resources
 
-        # Action space: 0=left, 1=right, 2=down, 3=up
+        # Action space: 0=up, 1=down, 2=left, 3=right
         self.action_space = spaces.Discrete(4)
 
         # Total number of possible states
@@ -23,14 +23,14 @@ class ResourceGatheringEnv(gym.Env):
         # Generate unique resource positions
         self.resource_positions = []
         while len(self.resource_positions) < num_resources:
-            position = (random.randint(0, grid_size[0]-1), random.randint(0, grid_size[1]-1))
+            position = (self.np_random.randint(0, grid_size[0]-1), self.np_random.randint(0, grid_size[1]-1))
             if position not in self.resource_positions:
                 self.resource_positions.append(position)
         
         # Generate unique enemy positions
         self.enemy_positions = []
         while len(self.enemy_positions) < grid_size[0]*grid_size[1]/2:
-            position = (random.randint(0, grid_size[0]-1), random.randint(0, grid_size[1]-1))
+            position = (self.np_random.randint(0, grid_size[0]-1), self.np_random.randint(0, grid_size[1]-1))
             if position not in self.enemy_positions and position not in self.resource_positions:
                 self.enemy_positions.append(position)
 
@@ -68,13 +68,13 @@ class ResourceGatheringEnv(gym.Env):
         return obs
 
     def step(self, action):
-        if action == 0 and self.agent_pos[0] > 0: # left
+        if action == 0 and self.agent_pos[0] > 0: # up
             self.agent_pos[0] -= 1
-        elif action == 1 and self.agent_pos[0] < self.grid_size[0] - 1: # right
+        elif action == 1 and self.agent_pos[0] < self.grid_size[0] - 1: # down
             self.agent_pos[0] += 1
-        elif action == 2 and self.agent_pos[1] > 0: # down
+        elif action == 2 and self.agent_pos[1] > 0: # left
             self.agent_pos[1] -= 1
-        elif action == 3 and self.agent_pos[1] < self.grid_size[1] - 1: # up
+        elif action == 3 and self.agent_pos[1] < self.grid_size[1] - 1: # right
             self.agent_pos[1] += 1
 
         reward = self.compute_reward()
@@ -184,13 +184,13 @@ class ResourceGatheringEnv(gym.Env):
             new_resource_status = resource_status.copy()
 
             # Determine new position based on action
-            if action == 0 and new_agent_pos[0] > 0:  # left
+            if action == 0 and new_agent_pos[0] > 0:  # up
                 new_agent_pos[0] -= 1
-            elif action == 1 and new_agent_pos[0] < self.grid_size[0] - 1:  # right
+            elif action == 1 and new_agent_pos[0] < self.grid_size[0] - 1:  # down
                 new_agent_pos[0] += 1
-            elif action == 2 and new_agent_pos[1] > 0:  # down
+            elif action == 2 and new_agent_pos[1] > 0:  # left
                 new_agent_pos[1] -= 1
-            elif action == 3 and new_agent_pos[1] < self.grid_size[1] - 1:  # up
+            elif action == 3 and new_agent_pos[1] < self.grid_size[1] - 1:  # right
                 new_agent_pos[1] += 1
 
             # Calculate reward

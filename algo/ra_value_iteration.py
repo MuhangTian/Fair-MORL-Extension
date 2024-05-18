@@ -12,6 +12,7 @@ sys.path.insert(0, '../envs')
 import envs
 
 import os
+import pdb
 
 class RAValueIteration:
     def __init__(self, env, discre_alpha, growth_rate, gamma, reward_dim, time_horizon, welfare_func_name, nsw_lambda, save_path, seed=1122, p=None, threshold=5, wdb=False, scaling_factor=1) -> None:
@@ -38,7 +39,7 @@ class RAValueIteration:
             max_reward = self.time_horizon/self.scaling_factor
         else:
             # Calculate the sum of the geometric series
-            sum_of_discounts = (1 - self.gamma ** (self.time_horizon/self.scaling_factor)) / (1 - self.gamma)
+            sum_of_discounts = (1 - self.gamma ** ((self.time_horizon+1)/self.scaling_factor)) / (1 - self.gamma)
             max_reward = sum_of_discounts
         max_discrete = self.discre_func(max_reward)
 
@@ -67,7 +68,7 @@ class RAValueIteration:
         for Racc in tqdm(self.init_Racc, desc="Initializing..."):
             for state in range(self.env.observation_space.n):
                 Racc_code = self.encode_Racc(Racc)
-                self.V[state, Racc_code, 0] = self.welfare_func(self.gamma ** self.time_horizon * Racc)
+                self.V[state, Racc_code, 0] = self.welfare_func(Racc)
     
     def encode_Racc(self, Racc):
         # Encode the accumulated reward for indexing.
@@ -84,13 +85,19 @@ class RAValueIteration:
             # Use the discretized grid from initialization that accounts for exponential growth
             # Calculate the sum of the geometric series for the remaining timesteps
             remaining_steps = self.time_horizon - t
-            max_accumulated_discounted_reward = (1 - self.gamma ** (remaining_steps)) / (1 - self.gamma)
+            if self.gamma == 1:
+                max_accumulated_discounted_reward = remaining_steps
+            else:
+                max_accumulated_discounted_reward = (1 - self.gamma ** (remaining_steps+1)) / (1 - self.gamma)
 
             max_possible_reward = min(max_accumulated_discounted_reward, self.discre_grid[-2])
             
             # max_possible_reward = np.round(max_accumulated_discounted_reward / self.discre_alpha) * self.discre_alpha / scaling_factor
 
             max_possible_discretized_reward = self.discre_func(max_possible_reward)
+
+            while max_possible_discretized_reward < 1:
+                max_possible_discretized_reward = self.discre_func(max_possible_discretized_reward+self.discre_alpha)
 
             print()
             print(f"Max discretized reward at t = {remaining_steps}: {max_possible_discretized_reward}")
@@ -121,8 +128,13 @@ class RAValueIteration:
         np.savez(self.save_path, V=self.V, Pi=self.Pi, Racc_record=self.Racc_record)
     
     def evaluate(self, final=False):
-        self.env.seed(self.seed)
-        state = self.env.reset()
+        # self.env.seed(self.seed)
+        state = self.env.reset(seed=self.seed)
+        # Ensure the renders directory exists within the specified save path
+        renders_path = self.save_path + '/renders'
+        os.makedirs(renders_path, exist_ok=True)
+        img_path = self.save_path + f'/renders/env_render_init.png'
+        self.env.render(save_path=img_path)
         Racc = np.zeros(self.reward_dim)
         c = 0
         
@@ -132,16 +144,13 @@ class RAValueIteration:
             
             next, reward, done = self.env.step(action)
             if isinstance(self.env, envs.Resource_Gathering.ResourceGatheringEnv):
-                # Ensure the renders directory exists within the specified save path
-                renders_path = self.save_path + '/renders'
-                os.makedirs(renders_path, exist_ok=True)
                 img_path = self.save_path + f'/renders/env_render_{self.time_horizon-t}.png'
                 self.env.render(save_path=img_path)
                 # decoded_pos, decoded_status = self.env.decode_state(next)
                 # print(f"Decoded Position: {decoded_pos}, Decoded Resource Status: {decoded_status}")
             state = next
             Racc += np.power(self.gamma, c) * reward
-            print(f"Accumulated Reward: {Racc}")
+            print(f"Accumulated Reward at t = {self.time_horizon-t}: {Racc}")
             
             c += 1
         

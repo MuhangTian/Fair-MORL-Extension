@@ -15,11 +15,14 @@ class DiscreFunc:
         if not isinstance(x, np.ndarray):
             x = np.array([x])  # Convert scalar to numpy array if not already an array
         assert isinstance(x, np.ndarray), "x must be a numpy array"
-        scaled_x = x / self.alpha
-        indices = np.round(np.log1p(scaled_x * (self.growth_rate - 1)) / np.log(self.growth_rate)).astype(int)
-        # Calculate the accumulated discretization bins
-        bins = self.alpha * (self.growth_rate ** indices - 1) / (self.growth_rate - 1)
-        return bins
+        if self.growth_rate > 1: 
+            scaled_x = x / self.alpha
+            indices = np.round(np.log1p(scaled_x * (self.growth_rate - 1)) / np.log(self.growth_rate)).astype(int)
+            # Calculate the accumulated discretization bins
+            bins = self.alpha * (self.growth_rate ** indices - 1) / (self.growth_rate - 1)
+            return bins
+        else:
+            return np.round(x / self.alpha) * self.alpha
 
 class WelfareFunc:
     def __init__(self, welfare_func_name, nsw_lambda=None, p=None, threshold=5):
@@ -60,11 +63,17 @@ class WelfareFunc:
         return np.power(np.prod(x), 1 / len(x))
 
     def resource_damage_scalarization(self, x):
+        # assert isinstance(x, np.ndarray), "x must be a numpy array"
+        # assert len(x) == 2, "x must have length 2 (resources_collected, damage_taken)"
+        # R = x[0]
+        # D = x[1]
+        # return R - max(0, (D - self.threshold) ** 3)
         assert isinstance(x, np.ndarray), "x must be a numpy array"
         assert len(x) == 2, "x must have length 2 (resources_collected, damage_taken)"
         R = x[0]
         D = x[1]
-        return R - max(0, (D - self.threshold) ** 3)
+        beta = 1 - self.threshold
+        return (R ** self.threshold) * ((1 / (D+1)) ** beta)
 
 def is_file_on_disk(file_name):
     if not os.path.isfile(file_name):
@@ -106,8 +115,8 @@ if __name__ == "__main__":
     # print("Discretized Output:", result)
 
     # Example usage
-    x = np.array([4, 0])  # Example reward vector [resources_collected, damage_taken]
-    threshold = 2  # Example threshold
+    x = np.array([2.3661, 1.38742049])  # Example reward vector [resources_collected, damage_taken]
+    threshold = 0.5  # Example threshold
     wf = WelfareFunc(welfare_func_name="resource_damage_scalarization", threshold=threshold)
     result = wf(x)
     print(f"Scalarized reward: {result}")
