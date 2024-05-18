@@ -45,7 +45,7 @@ class RAValueIteration:
 
         print(f"Max discretized reward during initialization: {max_discrete}")
 
-        self.discre_grid = np.unique(np.array([self.discre_func(alpha * self.discre_alpha) for alpha in range(int(np.ceil(max_discrete / self.discre_alpha)))]))
+        self.discre_grid = np.unique(np.array([self.discre_func(alpha * self.discre_alpha) for alpha in range(0, int(np.ceil(max_discrete / self.discre_alpha)) + 1)]))
         self.init_Racc = [np.asarray(r) for r in list(itertools.product(self.discre_grid, repeat=self.reward_dim))] # All possible reward accumulations.
         self.encode_Racc_dict = {str(r): i for i, r in enumerate(self.init_Racc)} # Encoding of reward accumulations.
         
@@ -88,7 +88,7 @@ class RAValueIteration:
             if self.gamma == 1:
                 max_accumulated_discounted_reward = remaining_steps
             else:
-                max_accumulated_discounted_reward = (1 - self.gamma ** (remaining_steps+1)) / (1 - self.gamma)
+                max_accumulated_discounted_reward = (1 - self.gamma ** (remaining_steps)) / (1 - self.gamma)
 
             max_possible_reward = min(max_accumulated_discounted_reward, self.discre_grid[-2])
             

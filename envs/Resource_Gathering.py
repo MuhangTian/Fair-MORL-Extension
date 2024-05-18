@@ -7,7 +7,7 @@ import matplotlib.patches as patches
 
 class ResourceGatheringEnv(gym.Env):
     def __init__(self, grid_size=(5, 5), num_resources=3, seed=None):
-        super(ResourceGatheringEnv, self).__init__(seed=seed)
+        super(ResourceGatheringEnv, self).__init__()
         self.grid_size = grid_size
         self.num_resources = num_resources
 
@@ -20,21 +20,27 @@ class ResourceGatheringEnv(gym.Env):
         # Observation space: Discrete space of all possible states
         self.observation_space = spaces.Discrete(self.total_states)
 
+        # Generate fixed resource and enemy positions at initialization
+        self.generate_positions(seed)
+
+        self.reset(seed)
+
+    def generate_positions(self, seed=None):
+        super().reset(seed=seed)
+
         # Generate unique resource positions
         self.resource_positions = []
-        while len(self.resource_positions) < num_resources:
-            position = (self.np_random.randint(0, grid_size[0]-1), self.np_random.randint(0, grid_size[1]-1))
+        while len(self.resource_positions) < self.num_resources:
+            position = (self.np_random.randint(0, self.grid_size[0]), self.np_random.randint(0, self.grid_size[1]))
             if position not in self.resource_positions:
                 self.resource_positions.append(position)
         
         # Generate unique enemy positions
         self.enemy_positions = []
-        while len(self.enemy_positions) < grid_size[0]*grid_size[1]/2:
-            position = (self.np_random.randint(0, grid_size[0]-1), self.np_random.randint(0, grid_size[1]-1))
+        while len(self.enemy_positions) < self.grid_size[0] * self.grid_size[1] // 2:
+            position = (self.np_random.randint(0, self.grid_size[0]), self.np_random.randint(0, self.grid_size[1]))
             if position not in self.enemy_positions and position not in self.resource_positions:
                 self.enemy_positions.append(position)
-
-        self.reset()
 
     def reset(self, seed=None):
         super().reset(seed=seed)
