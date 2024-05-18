@@ -67,7 +67,7 @@ class RAValueIteration:
         for Racc in tqdm(self.init_Racc, desc="Initializing..."):
             for state in range(self.env.observation_space.n):
                 Racc_code = self.encode_Racc(Racc)
-                self.V[state, Racc_code, 0] = self.welfare_func(Racc)
+                self.V[state, Racc_code, 0] = self.welfare_func(self.gamma ** self.time_horizon * Racc)
     
     def encode_Racc(self, Racc):
         # Encode the accumulated reward for indexing.

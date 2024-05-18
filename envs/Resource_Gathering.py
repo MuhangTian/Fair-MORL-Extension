@@ -4,8 +4,6 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from io import BytesIO
-from PIL import Image
 
 class ResourceGatheringEnv(gym.Env):
     def __init__(self, grid_size=(5, 5), num_resources=3):
@@ -13,7 +11,7 @@ class ResourceGatheringEnv(gym.Env):
         self.grid_size = grid_size
         self.num_resources = num_resources
 
-        # Action space: 0=up, 1=down, 2=left, 3=right
+        # Action space: 0=left, 1=right, 2=down, 3=up
         self.action_space = spaces.Discrete(4)
 
         # Total number of possible states
@@ -31,7 +29,7 @@ class ResourceGatheringEnv(gym.Env):
         
         # Generate unique enemy positions
         self.enemy_positions = []
-        while len(self.enemy_positions) < grid_size[0]*grid_size[1]/5:
+        while len(self.enemy_positions) < grid_size[0]*grid_size[1]/2:
             position = (random.randint(0, grid_size[0]-1), random.randint(0, grid_size[1]-1))
             if position not in self.enemy_positions and position not in self.resource_positions:
                 self.enemy_positions.append(position)
@@ -41,8 +39,11 @@ class ResourceGatheringEnv(gym.Env):
     def reset(self, seed=None):
         super().reset(seed=seed)
         
-        # Initialize agent position
-        self.agent_pos = [self.np_random.randint(self.grid_size[0]), self.np_random.randint(self.grid_size[1])]
+        # Initialize agent position and ensure it is not on a resource or enemy position
+        while True:
+            self.agent_pos = [self.np_random.randint(self.grid_size[0]), self.np_random.randint(self.grid_size[1])]
+            if tuple(self.agent_pos) not in self.resource_positions and tuple(self.agent_pos) not in self.enemy_positions:
+                break
 
         print(f"Agent spawning location: {self.agent_pos}")
         
