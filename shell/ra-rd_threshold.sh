@@ -11,10 +11,10 @@
 export env_name=ResourceGatheringEnv
 export size=5
 export num_locs=2
-export time_horizon=10
-export discre_alpha=0.5
+export time_horizon=6
+export discre_alpha=1
 export growth_rate=1.0
-export gamma=0.9
+export gamma=1
 export welfare_func_name=resource_damage_scalarization
 export threshold=0.5
 export save_path=$1

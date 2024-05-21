@@ -106,17 +106,17 @@ def is_file_not_on_disk(file_name):
         return file_name
 
 if __name__ == "__main__":
-    # alpha = 0.8
-    # func = DiscreFunc(alpha)
-    # test_values = np.array([50, 100, 150, 200, 250, 300, 350])
+    alpha = 0.8
+    func = DiscreFunc(alpha,1)
+    test_values = np.array([2.4])
     
-    # result = func(test_values)
-    # print("Input Values:", test_values)
-    # print("Discretized Output:", result)
+    result = func(test_values)
+    print("Input Values:", test_values)
+    print("Discretized Output:", result)
 
     # Example usage
-    x = np.array([2.3661, 1.38742049])  # Example reward vector [resources_collected, damage_taken]
-    threshold = 0.5  # Example threshold
-    wf = WelfareFunc(welfare_func_name="resource_damage_scalarization", threshold=threshold)
-    result = wf(x)
-    print(f"Scalarized reward: {result}")
+    # x = np.array([2.3661, 1.38742049])  # Example reward vector [resources_collected, damage_taken]
+    # threshold = 0.5  # Example threshold
+    # wf = WelfareFunc(welfare_func_name="resource_damage_scalarization", threshold=threshold)
+    # result = wf(x)
+    # print(f"Scalarized reward: {result}")
