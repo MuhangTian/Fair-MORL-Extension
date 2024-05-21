@@ -17,7 +17,7 @@ class WelfareQ:
         self.env = env
         self.lr = lr
         self.gamma = gamma
-        self.welfare_func_name = "nash welfare" if welfare_func_name == "nash-welfare" else welfare_func_name
+        self.welfare_func_name = welfare_func_name
         self.welfare_func = WelfareFunc(welfare_func_name, nsw_lambda, p)
         self.p = p
         self.save_path = save_path
@@ -115,6 +115,8 @@ class WelfareQ:
                     max_action = self.argmax_rd_threshold(R_acc, self.gamma * self.Q[next_state])
                 elif self.welfare_func_name == "Cobb-Douglas":
                     max_action = self.argmax_cobb_douglas(R_acc, self.gamma * self.Q[next_state])
+                else:
+                    raise ValueError(f"Unsupported welfare function: {self.welfare_func_name}")
                     
                 self.Q[state, action] = self.Q[state, action] + self.lr * (reward + self.gamma * self.Q[next_state, max_action] - self.Q[state, action])
                 
