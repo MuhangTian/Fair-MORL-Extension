@@ -67,7 +67,7 @@ class LinearScalarize:
             
             if self.welfare_func_name == "nash welfare":
                 nonlinear_score = np.power(np.product(R_acc), 1/len(R_acc))
-            elif self.welfare_func_name in ["p-welfare", "egalitarian"]:
+            elif self.welfare_func_name in ["p-welfare", "egalitarian", "RD_threshold", "Cobb-Douglas"]:
                 nonlinear_score = self.welfare_func(R_acc)
             else:
                 raise ValueError("Invalid welfare function name")

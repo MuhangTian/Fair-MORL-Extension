@@ -37,7 +37,7 @@ class ResourceGatheringEnv(gym.Env):
         
         # Generate unique enemy positions
         self.enemy_positions = []
-        while len(self.enemy_positions) < self.grid_size[0] * self.grid_size[1] // 2:
+        while len(self.enemy_positions) < self.grid_size[0] * self.grid_size[1] // 3:
             position = (self.np_random.randint(0, self.grid_size[0]), self.np_random.randint(0, self.grid_size[1]))
             if position not in self.enemy_positions and position not in self.resource_positions:
                 self.enemy_positions.append(position)

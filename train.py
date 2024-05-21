@@ -30,8 +30,11 @@ def get_setting(size, num_locs):
         loc_coords = [[0,0],[3,2],[1,0]]
         dest_coords = [[0,3],[3,3],[0,1]]
     elif num_locs == 4:
-        loc_coords = [[0,0],[3,2],[1,0],[2,2]]
-        dest_coords = [[0,3],[3,3],[0,1],[2,0]]
+        loc_coords = [[4, 12], [11, 6], [8, 3], [13, 9]]
+        dest_coords = [[2, 7], [10, 5], [1, 13], [14, 2]]
+
+
+
     else:
         raise NotImplementedError("Number of locations not implemented")
     
@@ -45,8 +48,8 @@ def parse_arguments():
     prs.add_argument('--time_horizon', type=is_positive_integer, default=1)
     prs.add_argument('--discre_alpha', type=is_positive_float, default=0.5)
     prs.add_argument("--gamma", type=is_positive_float, default=0.999)
-    prs.add_argument("--growth_rate", type=is_positive_float, default=1.001)
-    prs.add_argument("--welfare_func_name", choices=["egalitarian", "nash-welfare", "p-welfare", "resource_damage_scalarization"], default="nash-welfare")
+    prs.add_argument("--growth_rate", type=is_positive_float, default=1.0)
+    prs.add_argument("--welfare_func_name", choices=["egalitarian", "nash-welfare", "p-welfare", "RD-threshold", "Cobb-Douglas"], default="nash-welfare")
     prs.add_argument("--nsw_lambda", type=is_positive_float, default=1e-4)
     prs.add_argument("--wandb", action="store_true")
     prs.add_argument("--save_path", type=is_file_not_on_disk, default="results/trial.npz")
@@ -57,9 +60,9 @@ def parse_arguments():
     prs.add_argument("--init_val", type=float, default=0.0)
     prs.add_argument("--dim_factor", type=is_positive_float, default=0.9)
     prs.add_argument("--p", type=float, default=0.5)
-    prs.add_argument("--threshold", type=is_positive_float, default=0.5)  # For resource_damage_scalarization
+    prs.add_argument("--threshold", type=is_positive_float, default=4)  # For resource_damage_scalarization
     prs.add_argument("--scaling_factor", type=int, default=1) # scaling factor for accumuated reward initialization in RA-Value Iteration, should be 14 for taxi
-    prs.add_argument("--num_resources", type=int, default=3) # number of resources in Resource Gathering
+    prs.add_argument("--num_resources", type=int, default=8) # number of resources in Resource Gathering
     prs.add_argument("--project", type=str, default="RA-Iteration")
     prs.add_argument("--seed", type=int, default=1122)
     return prs.parse_args()

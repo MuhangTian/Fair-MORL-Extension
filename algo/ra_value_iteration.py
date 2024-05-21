@@ -428,7 +428,7 @@ extern "C" __global__ void compute_values(float *V, int *Pi, float *transition_p
         # print("self.Pi")
         # print(self.Pi)
         self.evaluate(final=True)
-        np.savez(self.save_path, V=self.V, Pi=self.Pi, Racc_record=self.Racc_record)
+        # np.savez(self.save_path, V=self.V, Pi=self.Pi, Racc_record=self.Racc_record)
     
     def evaluate(self, final=False):
         # self.env.seed(self.seed)
@@ -437,7 +437,8 @@ extern "C" __global__ void compute_values(float *V, int *Pi, float *transition_p
         renders_path = self.save_path + '/renders'
         os.makedirs(renders_path, exist_ok=True)
         img_path = self.save_path + f'/renders/env_render_init.png'
-        self.env.render(save_path=img_path)
+        if isinstance(self.env, envs.Resource_Gathering.ResourceGatheringEnv):
+            self.env.render(save_path=img_path)
         Racc = np.zeros(self.reward_dim)
         c = 0
         
@@ -461,7 +462,7 @@ extern "C" __global__ void compute_values(float *V, int *Pi, float *transition_p
             if self.wdb:
                 wandb.log({self.welfare_func_name: self.welfare_func.nash_welfare(Racc)})
             print(f"{self.welfare_func_name}: {self.welfare_func.nash_welfare(Racc)}, Racc: {Racc}")
-        elif self.welfare_func_name in ["p-welfare", "egalitarian", "resource_damage_scalarization"]:
+        elif self.welfare_func_name in ["p-welfare", "egalitarian", "RD_threshold", "Cobb-Douglas"]:
             if self.wdb:
                 wandb.log({self.welfare_func_name: self.welfare_func(Racc)})
             print(f"{self.welfare_func_name}: {self.welfare_func(Racc)}, Racc: {Racc}")
