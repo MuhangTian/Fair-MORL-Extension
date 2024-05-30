@@ -96,4 +96,4 @@ class MixturePolicy:
                 wandb.log({self.welfare_func_name: nonlinear_score})
         
         print("Finish training")
-        np.savez(self.save_path, policies=self.policies, Racc_record=np.asarray(self.Racc_record)) 
+        # np.savez(self.save_path, policies=self.policies, Racc_record=np.asarray(self.Racc_record)) 

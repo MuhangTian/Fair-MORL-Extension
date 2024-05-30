@@ -62,7 +62,7 @@ def parse_arguments():
     prs.add_argument("--p", type=float, default=0.5)
     prs.add_argument("--threshold", type=is_positive_float, default=4)  # For resource_damage_scalarization
     prs.add_argument("--scaling_factor", type=int, default=1) # scaling factor for accumuated reward initialization in RA-Value Iteration, should be 14 for taxi
-    prs.add_argument("--num_resources", type=int, default=8) # number of resources in Resource Gathering
+    prs.add_argument("--num_resources", type=int, default=6) # number of resources in Resource Gathering
     prs.add_argument("--project", type=str, default="RA-Iteration")
     prs.add_argument("--seed", type=int, default=1122)
     return prs.parse_args()
@@ -122,7 +122,9 @@ if __name__ == "__main__":
             env = env,
             init_val = args.init_val,
             episodes = args.episodes,
-            weights = [0.37, 0.63],     # optimal tuned weights
+            # weights = [0.37, 0.63],     # optimal tuned weights
+            # weights = [1/3, 1/3, 1/3],
+            weights = [1.2, -0.2],
             lr = args.lr,
             gamma = args.gamma,
             epsilon = args.epsilon,
@@ -141,7 +143,8 @@ if __name__ == "__main__":
             epsilon = args.epsilon,
             gamma = args.gamma,
             init_val = args.init_val,
-            weights = [[0.21, 0.79],[1.0, 0.0]],     # optimal tuned weights
+            # weights = [[0.21, 0.79],[1.0, 0.0]],     # optimal tuned weights
+            weights = [[1,0,0], [0,1,0], [0,0,1]],
             interval = 1,   # change policy after t/d timesteps
             welfare_func_name = args.welfare_func_name,
             save_path = args.save_path,

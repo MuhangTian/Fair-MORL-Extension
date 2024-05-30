@@ -10,6 +10,7 @@ import numpy as np
 from tqdm import tqdm
 import wandb
 from algo.utils import WelfareFunc
+import pdb
 
 class LinearScalarize:
     def __init__(self, env, init_val, episodes, weights, lr, gamma, epsilon, welfare_func_name, save_path, nsw_lambda, p=None, seed=2023, wdb=False) -> None:
@@ -46,8 +47,9 @@ class LinearScalarize:
             state = self.env.reset()
             done = False
             c = 0
-            
-            while not done:
+            k = 0
+            # while not done:
+            while k < 20:
                 if np.random.uniform(0,1) < self.epsilon:
                     action = self.env.action_space.sample()
                 else:
@@ -62,12 +64,15 @@ class LinearScalarize:
                 state = next
                 R_acc += np.power(self.gamma, c)*reward
                 c += 1
+                k += 1
+                # print(k)
+                # pdb.set_trace()
             
             R_acc = np.where(R_acc < 0, 0, R_acc)
             
             if self.welfare_func_name == "nash welfare":
                 nonlinear_score = np.power(np.product(R_acc), 1/len(R_acc))
-            elif self.welfare_func_name in ["p-welfare", "egalitarian", "RD_threshold", "Cobb-Douglas"]:
+            elif self.welfare_func_name in ["p-welfare", "egalitarian", "RD-threshold", "Cobb-Douglas"]:
                 nonlinear_score = self.welfare_func(R_acc)
             else:
                 raise ValueError("Invalid welfare function name")
@@ -79,4 +84,4 @@ class LinearScalarize:
                 wandb.log({self.welfare_func_name: nonlinear_score})
             
         print("Finish training")
-        np.savez(self.save_path, Q=self.Q, Racc_record=np.asarray(self.Racc_record)) 
+        # np.savez(self.save_path, Q=self.Q, Racc_record=np.asarray(self.Racc_record)) 

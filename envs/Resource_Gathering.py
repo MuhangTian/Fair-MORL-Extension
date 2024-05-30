@@ -23,6 +23,8 @@ class ResourceGatheringEnv(gym.Env):
         # Generate fixed resource and enemy positions at initialization
         self.generate_positions(seed)
 
+        self.loc_coords = [[0,0],[3,2]] # Placeholder for compatibility
+
         self.reset(seed)
 
     def generate_positions(self, seed=None):

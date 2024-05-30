@@ -1,12 +1,12 @@
 for i in {1..20}
 do
-    # sbatch shell/ra-nsw.sh results/ravi-$i.npz
+    nohup ./ra-nsw.sh ../results/ravi-$i.npz $i > ../logs/ravi-$i &
+    sleep 60
+    # nohup ./wel-nsw.sh ../results/wel-$i.npz $i > ../logs/wel-$i &
     # sleep 1
-    # sbatch shell/wel-nsw.sh results/wel-$i.npz
+    # nohup ./linear-nsw.sh ../results/linear-$i.npz $i > ../logs/linear-$i &
     # sleep 1
-    # sbatch shell/linear-nsw.sh results/linear-$i.npz
+    # nohup ./mixture-nsw.sh ../results/mixture-$i.npz $i > ../logs/mixture-$i &
     # sleep 1
-    sbatch shell/mixture-nsw.sh results/mixture-$i.npz
-    sleep 1
 done
 

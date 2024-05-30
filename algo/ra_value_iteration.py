@@ -371,32 +371,32 @@ extern "C" __global__ void compute_values(float *V, int *Pi, float *transition_p
             #     Racc_code = self.encode_Racc(Racc)
                 
             #     for state in range(self.env.observation_space.n):
-            #         print(f"State: {state}, Racc: {Racc}, Racc_code: {Racc_code}")
+            #         # print(f"State: {state}, Racc: {Racc}, Racc_code: {Racc_code}")
             #         transition_prob, reward_arr, next_state_arr = self.env.get_transition(state)  # vectorized, in dimensionality of the action space
                     
             #         next_Racc = Racc + np.power(self.gamma, self.time_horizon - t) * reward_arr  # use broadcasting
-            #         print(f"  Next_Racc: {next_Racc}")
+            #         # print(f"  Next_Racc: {next_Racc}")
             #         next_Racc_discretized = self.discre_func(next_Racc)  # Discretize next rewards.
-            #         print(f"  Next_Racc_discretized: {next_Racc_discretized}")
+            #         # print(f"  Next_Racc_discretized: {next_Racc_discretized}")
             #         next_Racc_code = [self.encode_Racc(d) for d in next_Racc_discretized]
-            #         print(f"  Next_Racc_code: {next_Racc_code}")
+            #         # print(f"  Next_Racc_code: {next_Racc_code}")
                     
             #         all_V = transition_prob * self.V[next_state_arr.astype(int), next_Racc_code, t - 1]
-            #         print(f"  all_V: {all_V}")
+            #         # print(f"  all_V: {all_V}")
                     
             #         # Print the indices being accessed
             #         for a in range(len(transition_prob)):
             #             for nr_code in next_Racc_code:
             #                 idx = next_state_arr[a] * self.V.shape[1] * (self.time_horizon + 1) + nr_code * (self.time_horizon + 1) + (t - 1)
-            #                 print(f"  Accessing V[{next_state_arr[a]}, {nr_code}, {t - 1}] (flattened idx: {idx}) = {self.V[next_state_arr[a], nr_code, t - 1]}")
+            #                 # print(f"  Accessing V[{next_state_arr[a]}, {nr_code}, {t - 1}] (flattened idx: {idx}) = {self.V[next_state_arr[a], nr_code, t - 1]}")
                     
             #         max_V = np.max(all_V)
             #         best_action = np.argmax(all_V)
 
-            #         print(f"  max_V: {max_V}, best_action: {best_action}")
+            #         # print(f"  max_V: {max_V}, best_action: {best_action}")
                     
             #         update_idx = state * self.V.shape[1] * (self.time_horizon + 1) + Racc_code * (self.time_horizon + 1) + t
-            #         print(f"  Updating V[{state}, {Racc_code}, {t}] (flattened idx: {update_idx}) with {max_V}")
+            #         # print(f"  Updating V[{state}, {Racc_code}, {t}] (flattened idx: {update_idx}) with {max_V}")
             #         self.V[state, Racc_code, t] = max_V
             #         self.Pi[state, Racc_code, t] = best_action
             
@@ -462,7 +462,7 @@ extern "C" __global__ void compute_values(float *V, int *Pi, float *transition_p
             if self.wdb:
                 wandb.log({self.welfare_func_name: self.welfare_func.nash_welfare(Racc)})
             print(f"{self.welfare_func_name}: {self.welfare_func.nash_welfare(Racc)}, Racc: {Racc}")
-        elif self.welfare_func_name in ["p-welfare", "egalitarian", "RD_threshold", "Cobb-Douglas"]:
+        elif self.welfare_func_name in ["p-welfare", "egalitarian", "RD-threshold", "Cobb-Douglas"]:
             if self.wdb:
                 wandb.log({self.welfare_func_name: self.welfare_func(Racc)})
             print(f"{self.welfare_func_name}: {self.welfare_func(Racc)}, Racc: {Racc}")

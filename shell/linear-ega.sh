@@ -1,17 +1,11 @@
-#!/bin/bash
-#SBATCH --job-name=LinearS
-#SBATCH --time=30-00:00:00
-#SBATCH --partition=compsci
-#SBATCH --mem=100G
-#SBATCH --mail-user=muhang.tian@duke.edu
-#SBATCH --output=logs/%j.out
-#SBATCH --mail-type=END
-#SBATCH --mail-type=FAIL
-
-export size=4
-export num_locs=2
+export env_name=Fair_Taxi_MOMDP
+export size=15
+export num_locs=4
+export time_horizon=150
+export discre_alpha=1
+export growth_rate=1
+export gamma=1
 export lr=0.1
-export gamma=0.999
 export epsilon=0.1
 export episodes=20000
 export init_val=1
@@ -20,11 +14,15 @@ export nsw_lambda=0.0000001
 export save_path=$1
 export method=linear_scalarize
 export dim_factor=0.0001
-export time_horizon=100
 export p=0.1
+export seed=$2
+export project=Ega
 
 python \
-    train.py \
+    ../train.py \
+    --env_name $env_name \
+    --project $project \
+    --seed $2 \
     --size $size \
     --num_locs $num_locs \
     --lr $lr \

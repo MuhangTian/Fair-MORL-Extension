@@ -17,7 +17,7 @@ class WelfareQ:
         self.env = env
         self.lr = lr
         self.gamma = gamma
-        self.welfare_func_name = welfare_func_name
+        self.welfare_func_name = "nash welfare" if welfare_func_name == "nash-welfare" else welfare_func_name
         self.welfare_func = WelfareFunc(welfare_func_name, nsw_lambda, p)
         self.p = p
         self.save_path = save_path
@@ -81,22 +81,24 @@ class WelfareQ:
         for i in range(1, self.episodes + 1):
             R_acc = np.zeros(len(self.env.loc_coords))
             state = self.env.reset()
-            print(f'Episode {i}\nInitial State: {self.env.decode(state)}')
+            # print(f'Episode {i}\nInitial State: {self.env.decode(state)}')
             done = False
             c = 0
         
-            while not done:
+            j = 0
+            # while not done:
+            while j < 20:
                 if np.random.uniform(0, 1) < self.epsilon:
                     action = self.env.action_space.sample()
                 else:
                     if self.non_stationary:
                         if self.welfare_func_name == "p-welfare":
                             action = self.argmax_p_welfare(R_acc + np.power(self.gamma, c) * self.Q[state])
-                        elif self.welfare_func_name == "nash-welfare":
+                        elif self.welfare_func_name == "nash welfare":
                             action = self.argmax_nsw(R_acc, np.power(self.gamma, c) * self.Q[state])
                         elif self.welfare_func_name == "egalitarian":
                             action = self.argmax_egalitarian(R_acc, R_acc + np.power(self.gamma, c) * self.Q[state])
-                        elif self.welfare_func_name == "RD_threshold":
+                        elif self.welfare_func_name == "RD-threshold":
                             action = self.argmax_rd_threshold(R_acc, np.power(self.gamma, c) * self.Q[state])
                         elif self.welfare_func_name == "Cobb-Douglas":
                             action = self.argmax_cobb_douglas(R_acc, np.power(self.gamma, c) * self.Q[state])
@@ -104,14 +106,15 @@ class WelfareQ:
                         raise NotImplementedError("Stationary policy is not implemented yet")
                         
                 next_state, reward, done = self.env.step(action)
+                # print(done)
                 
                 if self.welfare_func_name == "p-welfare":
                     max_action = self.argmax_p_welfare(self.gamma * self.Q[next_state])
-                elif self.welfare_func_name == "nash-welfare":
+                elif self.welfare_func_name == "nash welfare":
                     max_action = self.argmax_nsw(0, self.gamma * self.Q[next_state])
                 elif self.welfare_func_name == "egalitarian":
                     max_action = self.argmax_egalitarian(R_acc, self.gamma * self.Q[next_state])
-                elif self.welfare_func_name == "RD_threshold":
+                elif self.welfare_func_name == "RD-threshold":
                     max_action = self.argmax_rd_threshold(R_acc, self.gamma * self.Q[next_state])
                 elif self.welfare_func_name == "Cobb-Douglas":
                     max_action = self.argmax_cobb_douglas(R_acc, self.gamma * self.Q[next_state])
@@ -124,12 +127,13 @@ class WelfareQ:
                 state = next_state
                 R_acc += np.power(self.gamma, c) * reward
                 c += 1
+                j += 1
         
             R_acc = np.where(R_acc < 0, 0, R_acc)  # Replace the negatives with 0
             
-            if self.welfare_func_name == "nash-welfare":
+            if self.welfare_func_name == "nash welfare":
                 nonlinear_score = np.power(np.product(R_acc), 1 / len(R_acc))
-            elif self.welfare_func_name in ["p-welfare", "egalitarian", "RD_threshold", "Cobb-Douglas"]:
+            elif self.welfare_func_name in ["p-welfare", "egalitarian", "RD-threshold", "Cobb-Douglas"]:
                 nonlinear_score = self.welfare_func(R_acc)
                 
             self.Racc_record.append(R_acc)
@@ -139,5 +143,5 @@ class WelfareQ:
                 wandb.log({self.welfare_func_name: nonlinear_score})
         
         print("Finish training")
-        np.savez(self.save_path, Q=self.Q, Racc_record=np.asarray(self.Racc_record))
+        # np.savez(self.save_path, Q=self.Q, Racc_record=np.asarray(self.Racc_record))
 
