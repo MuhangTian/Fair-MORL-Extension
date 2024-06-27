@@ -135,11 +135,18 @@ class RAVI_NN:
         c = 0
 
         for t in range(self.time_horizon, 0, -1):
-            state_tensor = torch.tensor([state], dtype=torch.float32).unsqueeze(0)
-            Racc_tensor = torch.tensor(Racc, dtype=torch.float32).unsqueeze(0)
-            t_tensor = torch.tensor([t], dtype=torch.float32).unsqueeze(0)
+            state_tensor = torch.tensor([state], dtype=torch.float32)
+            Racc_tensor = torch.tensor(Racc, dtype=torch.float32)
+            t_tensor = torch.tensor([t], dtype=torch.float32)
             
-            action = torch.argmax(self.q_network(state_tensor, input_tensor, Racc_tensor, t_tensor)).item()
+            # Find the action that maximizes the Q-value
+            q_values = []
+            for action in range(self.num_actions):
+                action_tensor = torch.tensor([action], dtype=torch.float32)
+                q_value = self.q_network(state_tensor, action_tensor, Racc_tensor, t_tensor)
+                q_values.append(q_value)
+            q_values = torch.stack(q_values)
+            action = torch.argmax(q_values).item()
 
             next, reward, done = self.env.step(action)
             if isinstance(self.env, envs.Resource_Gathering.ResourceGatheringEnv):
