@@ -4,13 +4,13 @@ import wandb
 import numpy as np
 
 from algo.ra_value_iteration import RAValueIteration
+from algo.RAVI_NN import RAVI_NN
 from algo.welfare_q import WelfareQ
 from algo.mixture import MixturePolicy
 from algo.linear_scalarize import LinearScalarize
 from envs.fair_taxi import Fair_Taxi_MOMDP
 from envs.Resource_Gathering import ResourceGatheringEnv
 from algo.utils import is_positive_integer, is_positive_float, is_file_not_on_disk, is_within_zero_one_float
-
 
 def get_setting(size, num_locs):
     """
@@ -53,8 +53,8 @@ def parse_arguments():
     prs.add_argument("--nsw_lambda", type=is_positive_float, default=1e-4)
     prs.add_argument("--wandb", action="store_true")
     prs.add_argument("--save_path", type=is_file_not_on_disk, default="results/trial.npz")
-    prs.add_argument("--method", choices=["welfare_q", "ra_value_iteration", "linear_scalarize", "mixture"], required=True)
-    prs.add_argument("--lr", type=is_positive_float, default=0.1)
+    prs.add_argument("--method", choices=["welfare_q", "ra_value_iteration", "linear_scalarize", "mixture", "ravi_nn"], required=True)
+    prs.add_argument("--lr", type=is_positive_float, default=1e-3)
     prs.add_argument("--epsilon", type=is_within_zero_one_float, default=0.1)
     prs.add_argument("--episodes", type=is_positive_integer, default=1000)
     prs.add_argument("--init_val", type=float, default=0.0)
@@ -65,11 +65,13 @@ def parse_arguments():
     prs.add_argument("--num_resources", type=int, default=6) # number of resources in Resource Gathering
     prs.add_argument("--project", type=str, default="RA-Iteration")
     prs.add_argument("--seed", type=int, default=1122)
+    prs.add_argument("--hidden_dim", type=int, default=64)
     return prs.parse_args()
 
 def init_if_wandb(args):
     if args.wandb:
         # wandb.init(project=args.project, entity="muhang-tian")
+        wandb.login(key='0a9f2b78b0b2e6ffd3114b92ca6b4bcd648c1b0d')
         wandb.init(project=args.project, entity="nianli_peng")
         wandb.config.update(args)
 
@@ -151,6 +153,22 @@ if __name__ == "__main__":
             nsw_lambda = args.nsw_lambda,
             p = args.p,
             wdb = args.wandb,
+        )
+    elif args.method == "ravi_nn":
+        algo = RAVI_NN(
+            env = env,
+            gamma = args.gamma,
+            reward_dim = args.num_locs,
+            time_horizon = args.time_horizon,
+            welfare_func_name = args.welfare_func_name,
+            nsw_lambda = args.nsw_lambda,
+            wdb = args.wandb,
+            save_path = args.save_path,
+            p = args.p,
+            threshold = args.threshold,  # Pass threshold for resource_damage_scalarization
+            scaling_factor = args.scaling_factor,
+            lr = args.lr,  # Learning rate for the Q-network
+            hidden_dim = args.hidden_dim  # Dimension of hidden layers in the Q-network
         )
 
     algo.train()
