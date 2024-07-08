@@ -86,10 +86,8 @@ class RAVI_NN:
                 Racc = np.random.rand(self.reward_dim) * (self.time_horizon - t) / self.scaling_factor  # Randomly sample accumulated reward
                 transition_prob, reward_arr, next_state_arr = self.env.get_transition(state)
 
-                next_Racc = Racc + np.power(self.gamma, self.time_horizon - t) * reward_arr
-
-                for a in range(self.num_actions):
-                    self.replay_buffer.append((state, a, Racc, t, reward_arr[a], next_state_arr[a], next_Racc[a], transition_prob[a]))
+                # Store the entire transition as a single experience
+                self.replay_buffer.append((state, Racc, t, transition_prob, reward_arr, next_state_arr))
 
                 if len(self.replay_buffer) > 32:
                     batch = random.sample(self.replay_buffer, 32)
@@ -98,33 +96,37 @@ class RAVI_NN:
         self.evaluate(final=True)
 
     def update_q_network(self, batch, t):
-        states, actions, Raccs, ts, rewards, next_states, next_Raccs, transition_probs = zip(*batch)
+        # Unpack the batch into separate lists
+        states, Raccs, ts, transition_probs, reward_arrs, next_state_arrs = zip(*batch)
 
+        # Convert lists to tensors and move to the appropriate device
         states = torch.tensor(states, dtype=torch.float32).unsqueeze(-1).to(self.device)
-        actions = torch.tensor(actions, dtype=torch.long).unsqueeze(-1).to(self.device)
         Raccs = torch.tensor(Raccs, dtype=torch.float32).to(self.device)
         ts = torch.tensor(ts, dtype=torch.float32).unsqueeze(-1).to(self.device)
-        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
-        next_states = torch.tensor(next_states, dtype=torch.float32).unsqueeze(-1).to(self.device)
-        next_Raccs = torch.tensor(next_Raccs, dtype=torch.float32).to(self.device)
         transition_probs = torch.tensor(transition_probs, dtype=torch.float32).to(self.device)
+        reward_arrs = torch.tensor(reward_arrs, dtype=torch.float32).to(self.device)
+        next_state_arrs = torch.tensor(next_state_arrs, dtype=torch.float32).to(self.device)
 
+        # Initialize a tensor to store the target Q-values for each action
+        target_q_values = torch.zeros((len(batch), self.num_actions)).to(self.device)
+
+        # Compute the target Q-values for each action
         with torch.no_grad():
-            target_q_values = []
             for i in range(len(batch)):
-                # Compute Q-values for the next state
-                next_q_values = self.q_network(next_states[i], next_Raccs[i], ts[i] - 1)
-                # Find the maximum Q-value for the next state
-                max_next_q_value = torch.max(next_q_values)
-                # Compute the target Q-value using the Bellman equation
-                target_q_value = rewards[i] + self.gamma * max_next_q_value * transition_probs[i]
-                target_q_values.append(target_q_value)
-            target_q_values = torch.stack(target_q_values)
+                for a in range(self.num_actions):
+                    next_state = next_state_arrs[i, a]
+                    next_Racc = Raccs[i] + torch.pow(self.gamma, self.time_horizon - ts[i]) * reward_arrs[i, a]
+                    next_q_values = self.q_network(next_state.unsqueeze(0), next_Racc.unsqueeze(0), (ts[i] - 1).unsqueeze(0))
+                    max_next_q_value = torch.max(next_q_values)
+                    target_q_values[i, a] = reward_arrs[i, a] + self.gamma * max_next_q_value * transition_probs[i, a]
 
         # Get the Q-values for the current state-action pairs
-        q_values = self.q_network(states, Raccs, ts).gather(1, actions)
+        q_values = self.q_network(states, Raccs, ts)
+        
+        # Compute the loss between the current Q-values and the target Q-values
         loss = self.criterion(q_values, target_q_values)
 
+        # Zero out the gradients, backpropagate the loss, and update the network parameters
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
