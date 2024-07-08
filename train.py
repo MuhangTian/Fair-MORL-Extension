@@ -26,6 +26,9 @@ def get_setting(size, num_locs):
     if num_locs == 2:
         loc_coords = [[0,0],[3,2]]
         dest_coords = [[0,3],[3,3]]
+    elif num_locs == 1:
+        loc_coords = [[0,0]]
+        dest_coords = [[1,1]]
     elif num_locs == 3:
         loc_coords = [[0,0],[3,2],[1,0]]
         dest_coords = [[0,3],[3,3],[0,1]]
