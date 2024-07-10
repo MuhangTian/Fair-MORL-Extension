@@ -3,7 +3,6 @@ import argparse
 import wandb
 import numpy as np
 
-from algo.ra_value_iteration import RAValueIteration
 from algo.RAVI_NN import RAVI_NN
 from algo.welfare_q import WelfareQ
 from algo.mixture import MixturePolicy
@@ -92,6 +91,7 @@ if __name__ == "__main__":
     init_if_wandb(args)
     
     if args.method == "ra_value_iteration":
+        from algo.ra_value_iteration import RAValueIteration        # moved here due to Tony's incompatibility with PyCuda
         algo = RAValueIteration(
             env = env,
             discre_alpha = args.discre_alpha,

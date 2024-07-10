@@ -86,11 +86,12 @@ class RAVI_NN:
                 Racc = np.random.rand(self.reward_dim) * (self.time_horizon - t) / self.scaling_factor  # Randomly sample accumulated reward
                 transition_prob, reward_arr, next_state_arr = self.env.get_transition(state)
 
-                Racc_replicated = np.tile(Racc, (self.num_actions, 1))
-                t_replicated = np.tile(t, (self.num_actions, 1))
+                # Racc_replicated = np.tile(Racc, (self.num_actions, 1))
+                # t_replicated = np.tile(t, (self.num_actions, 1))
 
                 # Store the experience
-                self.replay_buffer.append((state, Racc_replicated, t_replicated, transition_prob, reward_arr, next_state_arr))
+                # self.replay_buffer.append((state, Racc_replicated, t_replicated, transition_prob, reward_arr, next_state_arr))
+                self.replay_buffer.append((state, Racc, t, transition_prob, reward_arr, next_state_arr))
 
                 if len(self.replay_buffer) > 32:
                     batch = random.sample(self.replay_buffer, 32)
@@ -103,23 +104,23 @@ class RAVI_NN:
         states, Raccs, ts, transition_probs, reward_arrs, next_state_arrs = zip(*batch)
 
         # Convert lists to tensors and move to the appropriate device
-        states = torch.tensor(states, dtype=torch.float32).to(self.device)
-        Raccs = torch.tensor(Raccs, dtype=torch.float32).to(self.device)
-        ts = torch.tensor(ts, dtype=torch.float32).to(self.device)
-        transition_probs = torch.tensor(transition_probs, dtype=torch.float32).to(self.device)
-        reward_arrs = torch.tensor(reward_arrs, dtype=torch.float32).to(self.device)
-        next_state_arrs = torch.tensor(next_state_arrs, dtype=torch.long).to(self.device)  # Ensure long type for indexing
+        states = torch.tensor(states, dtype=torch.float32).to(self.device) # (bsz)
+        Raccs = torch.tensor(Raccs, dtype=torch.float32).to(self.device).squeeze(-1) # (bsz)
+        ts = torch.tensor(ts, dtype=torch.float32).to(self.device) # (bsz)
+        transition_probs = torch.tensor(transition_probs, dtype=torch.float32).to(self.device)  # (bsz, n_actions)
+        reward_arrs = torch.tensor(reward_arrs, dtype=torch.float32).to(self.device) # (bsz, n_actions, 1)
+        next_state_arrs = torch.tensor(next_state_arrs, dtype=torch.long).to(self.device)  # (bsz, n_actions)
 
         # Initialize a tensor to store the target Q-values for each action
-        target_q_values = torch.zeros((len(batch), self.num_actions)).to(self.device)
+        target_q_values = torch.zeros((len(batch), self.num_actions)).to(self.device)   # (bsz, n_actions)
 
         # Compute the target Q-values for each action
         with torch.no_grad():
             for i in range(len(batch)):
                 for a in range(self.num_actions):
-                    next_state = next_state_arrs[i, a].unsqueeze(0)  # Make it a 1D tensor
-                    next_Racc = Raccs[i, a] + torch.pow(self.gamma, self.time_horizon - ts[i, a]) * reward_arrs[i, a]
-                    next_q_values = self.q_network(next_state.unsqueeze(0), next_Racc.unsqueeze(0), (ts[i, a] - 1).unsqueeze(0))
+                    next_state = next_state_arrs[i, a]  # Make it a 1D tensor
+                    next_Racc = Raccs[i] + torch.pow(self.gamma, self.time_horizon - ts[i]) * reward_arrs[i, a]   # 1d
+                    next_q_values = self.q_network(next_state.unsqueeze(0), next_Racc, (ts[i] - 1).unsqueeze(0))
                     target_q_values[i, a] = torch.max(next_q_values * transition_probs[i, a])
 
                     # Print statements for debugging
@@ -130,13 +131,14 @@ class RAVI_NN:
                     # target_q_values[i, a] = reward_arrs[i, a] + self.gamma * max_next_q_value * transition_probs[i, a]
 
         # Get the Q-values for the current state-action pairs
-        print(state)
+        # print(state)
         print(states.shape)
         print(Raccs)
         print(Raccs.shape)
         print(ts)
         print(ts.shape)
-        q_values = self.q_network(states, Raccs, ts)
+        # q_values = self.q_network(states.repeat(Raccs.shape[1], 1).transpose(1, 0).unsqueeze(-1), Raccs, ts)
+        q_values = self.q_network(states.unsqueeze(-1), Raccs.unsqueeze(-1), ts.unsqueeze(-1))
 
         print(f"q_values: {q_values}")
         print(q_values.shape)
