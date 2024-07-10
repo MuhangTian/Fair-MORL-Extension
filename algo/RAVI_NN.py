@@ -86,29 +86,19 @@ class RAVI_NN:
                 Racc = np.random.rand(self.reward_dim) * (self.time_horizon - t) / self.scaling_factor  # Randomly sample accumulated reward
                 transition_prob, reward_arr, next_state_arr = self.env.get_transition(state)
 
-                # Replicate state, Racc, and t to match the action dimension
-                state_replicated = np.tile(state, (self.num_actions, 1))
                 Racc_replicated = np.tile(Racc, (self.num_actions, 1))
                 t_replicated = np.tile(t, (self.num_actions, 1))
 
-                # Store the entire transition as a single experience
-                print(state_replicated)
-                print(Racc_replicated)
-                print(t_replicated)
-                print(transition_prob)
-                print(reward_arr)
-                print(next_state_arr)
-                print()
-
-                self.replay_buffer.append((state_replicated, Racc_replicated, t_replicated, transition_prob, reward_arr, next_state_arr))
+                # Store the experience
+                self.replay_buffer.append((state, Racc_replicated, t_replicated, transition_prob, reward_arr, next_state_arr))
 
                 if len(self.replay_buffer) > 32:
                     batch = random.sample(self.replay_buffer, 32)
-                    self.update_q_network(batch, t)
+                    self.update_q_network(batch)
 
         self.evaluate(final=True)
 
-    def update_q_network(self, batch, t):
+    def update_q_network(self, batch):
         # Unpack the batch into separate lists
         states, Raccs, ts, transition_probs, reward_arrs, next_state_arrs = zip(*batch)
 
@@ -130,11 +120,27 @@ class RAVI_NN:
                     next_state = next_state_arrs[i, a].unsqueeze(0)  # Make it a 1D tensor
                     next_Racc = Raccs[i, a] + torch.pow(self.gamma, self.time_horizon - ts[i, a]) * reward_arrs[i, a]
                     next_q_values = self.q_network(next_state.unsqueeze(0), next_Racc.unsqueeze(0), (ts[i, a] - 1).unsqueeze(0))
-                    target_q_values[i, a] = torch.max(next_q_values)
+                    target_q_values[i, a] = torch.max(next_q_values * transition_probs[i, a])
+
+                    # Print statements for debugging
+                    # print(f"next_state: {next_state}")
+                    # print(f"next_Racc: {next_Racc}")
+                    # print(f"next_q_values: {next_q_values}")
+
                     # target_q_values[i, a] = reward_arrs[i, a] + self.gamma * max_next_q_value * transition_probs[i, a]
 
         # Get the Q-values for the current state-action pairs
+        print(state)
+        print(states.shape)
+        print(Raccs)
+        print(Raccs.shape)
+        print(ts)
+        print(ts.shape)
         q_values = self.q_network(states, Raccs, ts)
+
+        print(f"q_values: {q_values}")
+        print(q_values.shape)
+        print(f"target_q_values: {target_q_values}")
         
         # Compute the loss between the current Q-values and the target Q-values
         loss = self.criterion(q_values, target_q_values)
