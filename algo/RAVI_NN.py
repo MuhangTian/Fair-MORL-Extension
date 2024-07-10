@@ -92,6 +92,14 @@ class RAVI_NN:
                 t_replicated = np.tile(t, (self.num_actions, 1))
 
                 # Store the entire transition as a single experience
+                print(state_replicated)
+                print(Racc_replicated)
+                print(t_replicated)
+                print(transition_prob)
+                print(reward_arr)
+                print(next_state_arr)
+                print()
+
                 self.replay_buffer.append((state_replicated, Racc_replicated, t_replicated, transition_prob, reward_arr, next_state_arr))
 
                 if len(self.replay_buffer) > 32:
@@ -122,8 +130,8 @@ class RAVI_NN:
                     next_state = next_state_arrs[i, a].unsqueeze(0)  # Make it a 1D tensor
                     next_Racc = Raccs[i, a] + torch.pow(self.gamma, self.time_horizon - ts[i, a]) * reward_arrs[i, a]
                     next_q_values = self.q_network(next_state.unsqueeze(0), next_Racc.unsqueeze(0), (ts[i, a] - 1).unsqueeze(0))
-                    max_next_q_value = torch.max(next_q_values)
-                    target_q_values[i, a] = reward_arrs[i, a] + self.gamma * max_next_q_value * transition_probs[i, a]
+                    target_q_values[i, a] = torch.max(next_q_values)
+                    # target_q_values[i, a] = reward_arrs[i, a] + self.gamma * max_next_q_value * transition_probs[i, a]
 
         # Get the Q-values for the current state-action pairs
         q_values = self.q_network(states, Raccs, ts)
