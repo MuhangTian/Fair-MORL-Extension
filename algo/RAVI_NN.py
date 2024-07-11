@@ -59,7 +59,7 @@ class RAVI_NN:
         self.replay_buffer = []
 
     def initialize(self):
-        num_samples = 1000  # Define a fixed number of samples for initialization
+        num_samples = 10000  # Define a fixed number of samples for initialization
         for _ in tqdm(range(num_samples), desc="Initializing Q-network..."):
             state = np.random.randint(self.env.observation_space.n)
             Racc = np.random.rand(self.reward_dim) * self.time_horizon / self.scaling_factor  # Randomly sample accumulated reward
@@ -68,7 +68,9 @@ class RAVI_NN:
             Racc_tensor = torch.tensor(Racc, dtype=torch.float32).unsqueeze(0).to(self.device)
             
             output = self.q_network(state_tensor, Racc_tensor, t)
-            target = torch.tensor(self.welfare_func(Racc), dtype=torch.float32).unsqueeze(0).to(self.device)
+            # Compute the target value and replicate it for all actions
+            target_value = self.welfare_func(Racc)
+            target = torch.tensor([target_value] * self.action_dim, dtype=torch.float32).unsqueeze(0).to(self.device)
         
             self.q_network.zero_grad()
             loss = self.criterion(output, target)
@@ -132,17 +134,17 @@ class RAVI_NN:
 
         # Get the Q-values for the current state-action pairs
         # print(state)
-        print(states.shape)
-        print(Raccs)
-        print(Raccs.shape)
-        print(ts)
-        print(ts.shape)
+        # print(states.shape)
+        # print(Raccs)
+        # print(Raccs.shape)
+        # print(ts)
+        # print(ts.shape)
         # q_values = self.q_network(states.repeat(Raccs.shape[1], 1).transpose(1, 0).unsqueeze(-1), Raccs, ts)
         q_values = self.q_network(states.unsqueeze(-1), Raccs.unsqueeze(-1), ts.unsqueeze(-1))
 
-        print(f"q_values: {q_values}")
-        print(q_values.shape)
-        print(f"target_q_values: {target_q_values}")
+        # print(f"q_values: {q_values}")
+        # print(q_values.shape)
+        # print(f"target_q_values: {target_q_values}")
         
         # Compute the loss between the current Q-values and the target Q-values
         loss = self.criterion(q_values, target_q_values)
@@ -152,43 +154,49 @@ class RAVI_NN:
         loss.backward()
         self.optimizer.step()
 
-    def evaluate(self, final=False):
-        state = self.env.reset(seed=self.seed)
-        renders_path = self.save_path + '/renders'
-        os.makedirs(renders_path, exist_ok=True)
-        img_path = self.save_path + f'/renders/env_render_init.png'
+def evaluate(self, final=False):
+    state = self.env.reset(seed=self.seed)
+    renders_path = self.save_path + '/renders'
+    os.makedirs(renders_path, exist_ok=True)
+    img_path = self.save_path + f'/renders/env_render_init.png'
+    if isinstance(self.env, envs.Resource_Gathering.ResourceGatheringEnv):
+        self.env.render(save_path=img_path)
+    Racc = np.zeros(self.reward_dim)
+    c = 0
+
+    for t in range(self.time_horizon, 0, -1):
+        state_tensor = torch.tensor([state], dtype=torch.float32).to(self.device)
+        Racc_tensor = torch.tensor(Racc, dtype=torch.float32).to(self.device)
+        t_tensor = torch.tensor([t], dtype=torch.float32).to(self.device)
+        
+        # Find the action that maximizes the Q-value
+        q_values = self.q_network(state_tensor, Racc_tensor, t_tensor)
+        action = torch.argmax(q_values).item()
+
+        # Detailed printout for each timestep
+        print(f"Timestep {self.time_horizon - t + 1}")
+        print(f"State: {state}")
+        print(f"Q-values: {q_values.cpu().detach().numpy()}")
+        print(f"Action taken: {action}")
+
+        next, reward, done = self.env.step(action)
         if isinstance(self.env, envs.Resource_Gathering.ResourceGatheringEnv):
+            img_path = self.save_path + f'/renders/env_render_{self.time_horizon-t}.png'
             self.env.render(save_path=img_path)
-        Racc = np.zeros(self.reward_dim)
-        c = 0
+        state = next
+        Racc += np.power(self.gamma, c) * reward
+        print(f"Accumulated Reward at t = {self.time_horizon-t}: {Racc}\n")
 
-        for t in range(self.time_horizon, 0, -1):
-            state_tensor = torch.tensor([state], dtype=torch.float32).to(self.device)
-            Racc_tensor = torch.tensor(Racc, dtype=torch.float32).to(self.device)
-            t_tensor = torch.tensor([t], dtype=torch.float32).to(self.device)
-            
-            # Find the action that maximizes the Q-value
-            q_values = self.q_network(state_tensor, Racc_tensor, t_tensor)
-            action = torch.argmax(q_values).item()
+        c += 1
 
-            next, reward, done = self.env.step(action)
-            if isinstance(self.env, envs.Resource_Gathering.ResourceGatheringEnv):
-                img_path = self.save_path + f'/renders/env_render_{self.time_horizon-t}.png'
-                self.env.render(save_path=img_path)
-            state = next
-            Racc += np.power(self.gamma, c) * reward
-            print(f"Accumulated Reward at t = {self.time_horizon-t}: {Racc}")
+    if self.welfare_func_name == "nash welfare":
+        if self.wdb:
+            wandb.log({self.welfare_func_name: self.welfare_func.nash_welfare(Racc)})
+        print(f"{self.welfare_func_name}: {self.welfare_func.nash_welfare(Racc)}, Racc: {Racc}")
+    elif self.welfare_func_name in ["p-welfare", "egalitarian", "RD-threshold", "Cobb-Douglas"]:
+        if self.wdb:
+            wandb.log({self.welfare_func_name: self.welfare_func(Racc)})
+        print(f"{self.welfare_func_name}: {self.welfare_func(Racc)}, Racc: {Racc}")
 
-            c += 1
-
-        if self.welfare_func_name == "nash welfare":
-            if self.wdb:
-                wandb.log({self.welfare_func_name: self.welfare_func.nash_welfare(Racc)})
-            print(f"{self.welfare_func_name}: {self.welfare_func.nash_welfare(Racc)}, Racc: {Racc}")
-        elif self.welfare_func_name in ["p-welfare", "egalitarian", "RD-threshold", "Cobb-Douglas"]:
-            if self.wdb:
-                wandb.log({self.welfare_func_name: self.welfare_func(Racc)})
-            print(f"{self.welfare_func_name}: {self.welfare_func(Racc)}, Racc: {Racc}")
-
-        if final:
-            self.Racc_record = Racc
+    if final:
+        self.Racc_record = Racc
