@@ -11,7 +11,7 @@ import envs
 import os
 
 class QNetwork(nn.Module):
-    def __init__(self, state_dim, action_dim, reward_dim, hidden_dim=64):
+    def __init__(self, state_dim, action_dim, reward_dim, hidden_dim=128):
         super(QNetwork, self).__init__()
         self.fc1 = nn.Linear(1 + reward_dim + 1, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
@@ -25,8 +25,18 @@ class QNetwork(nn.Module):
         return q_values
     
 class RAVI_NN:
-    def __init__(self, env, gamma, reward_dim, time_horizon, welfare_func_name, nsw_lambda, save_path, seed=1122, p=None, threshold=5, wdb=False, scaling_factor=1, hidden_dim=64, lr=1e-3) -> None:
+    def __init__(
+            self, env, gamma, reward_dim, 
+            time_horizon, welfare_func_name, 
+            nsw_lambda, save_path, seed=1122, 
+            p=None, threshold=5, wdb=False, 
+            scaling_factor=1, hidden_dim=64, 
+            lr=1e-3, batch_size=32, 
+            n_samples_per_timestep=10000, grad_norm=1,
+        ) -> None:
+        
         self.env = env
+        self.grad_norm = grad_norm
         self.welfare_func_name = "nash welfare" if welfare_func_name == "nash-welfare" else welfare_func_name
         self.gamma = gamma
         self.scaling_factor = scaling_factor
@@ -37,6 +47,8 @@ class RAVI_NN:
         self.seed = seed
         self.wdb = wdb
         self.save_path = save_path
+        self.batch_size = batch_size
+        self.n_samples_per_timestep = n_samples_per_timestep
 
         # Set device to GPU if available
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -75,31 +87,32 @@ class RAVI_NN:
             self.q_network.zero_grad()
             loss = self.criterion(output, target)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), self.grad_norm)
             self.optimizer.step()
 
     def train(self):
         self.initialize()
-        
-        num_samples = 1000  # Define a fixed number of samples per iteration
-        
+
         for t in tqdm(range(1, self.time_horizon + 1), desc="Training..."):
-            for _ in range(num_samples):
+            self.replay_buffer = []
+
+            for _ in range(self.n_samples_per_timestep):
                 state = np.random.randint(self.env.observation_space.n)
                 Racc = np.random.rand(self.reward_dim) * (self.time_horizon - t) / self.scaling_factor  # Randomly sample accumulated reward
                 transition_prob, reward_arr, next_state_arr = self.env.get_transition(state)
-
-                # Racc_replicated = np.tile(Racc, (self.num_actions, 1))
-                # t_replicated = np.tile(t, (self.num_actions, 1))
-
-                # Store the experience
-                # self.replay_buffer.append((state, Racc_replicated, t_replicated, transition_prob, reward_arr, next_state_arr))
                 self.replay_buffer.append((state, Racc, t, transition_prob, reward_arr, next_state_arr))
 
-                if len(self.replay_buffer) > 32:
-                    batch = random.sample(self.replay_buffer, 32)
-                    self.update_q_network(batch)
+            self.train_one_epoch()      # train for one epoch after all the samples are collected
 
         self.evaluate(final=True)
+    
+    def train_one_epoch(self):
+        indices = np.arange(len(self.replay_buffer))
+        np.random.shuffle(indices)
+        iters = len(self.replay_buffer) // self.batch_size
+        for i in range(iters):
+            batch_samples = self.replay_buffer[i * self.batch_size: (i + 1) * self.batch_size]
+            self.update_q_network(batch_samples)
 
     def update_q_network(self, batch):
         # Unpack the batch into separate lists
@@ -152,6 +165,7 @@ class RAVI_NN:
         # Zero out the gradients, backpropagate the loss, and update the network parameters
         self.optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), self.grad_norm)
         self.optimizer.step()
 
     def evaluate(self, final=False):

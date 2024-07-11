@@ -1,14 +1,3 @@
-#!/bin/bash
-#SBATCH --job-name=RAVI-NN
-#SBATCH --time=7-00:00:00
-#SBATCH --partition=compsci-gpu
-#SBATCH --gres=gpu:1
-#SBATCH --mem=10G
-#SBATCH --mail-user=muhang.tian@duke.edu
-#SBATCH --output=logs/%j.out
-#SBATCH --mail-type=END
-#SBATCH --mail-type=FAIL
-
 export env_name="Fair_Taxi_MOMDP"
 #export size=10
 export size=2
@@ -40,4 +29,4 @@ python \
     --save_path $save_path \
     --method $method \
     --scaling_factor $scaling_factor \
-    --wandb \
+    # --wandb \
