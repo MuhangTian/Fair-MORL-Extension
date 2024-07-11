@@ -26,15 +26,27 @@ class QNetwork(nn.Module):
     
 class RAVI_NN:
     def __init__(
-            self, env, gamma, reward_dim, 
-            time_horizon, welfare_func_name, 
-            nsw_lambda, save_path, seed=1122, 
-            p=None, threshold=5, wdb=False, 
-            scaling_factor=1, hidden_dim=64, 
-            lr=1e-3, batch_size=32, 
-            n_samples_per_timestep=10000, grad_norm=1,
+            self, 
+            env, 
+            gamma, 
+            reward_dim, 
+            time_horizon, 
+            welfare_func_name, 
+            nsw_lambda, 
+            save_path, 
+            seed=1122, 
+            p=None, 
+            threshold=5, 
+            wdb=False, 
+            scaling_factor=1, 
+            hidden_dim=64, 
+            lr=1e-3, 
+            batch_size=128, 
+            n_samples_per_timestep=10000, 
+            grad_norm=1,
+            avg_loss_interval=50,
         ) -> None:
-        
+
         self.env = env
         self.grad_norm = grad_norm
         self.welfare_func_name = "nash welfare" if welfare_func_name == "nash-welfare" else welfare_func_name
@@ -67,8 +79,8 @@ class RAVI_NN:
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
         self.criterion = nn.MSELoss()
 
-        # Buffer to store (state, action, Racc, t, reward, next_state, next_Racc, transition_prob)
-        self.replay_buffer = []
+        self.loss_record = []
+        self.avg_loss_interval = avg_loss_interval
 
     def initialize(self):
         num_samples = 10000  # Define a fixed number of samples for initialization
@@ -86,9 +98,12 @@ class RAVI_NN:
         
             self.q_network.zero_grad()
             loss = self.criterion(output, target)
+            self.__record_loss(loss, interval=1000)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), self.grad_norm)
             self.optimizer.step()
+
+        self.loss_record = []       # clean loss record after initialization
 
     def train(self):
         self.initialize()
@@ -161,12 +176,24 @@ class RAVI_NN:
         
         # Compute the loss between the current Q-values and the target Q-values
         loss = self.criterion(q_values, target_q_values)
+        self.__record_loss(loss)
 
         # Zero out the gradients, backpropagate the loss, and update the network parameters
         self.optimizer.zero_grad()
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.q_network.parameters(), self.grad_norm)
         self.optimizer.step()
+    
+    def __record_loss(self, loss, interval=None):      # private method
+        loss_interval = interval if interval is not None else self.avg_loss_interval
+
+        if len(self.loss_record) == loss_interval:
+            # assert len(self.loss_record) == self.avg_loss_interval, "Number of losses is wrong!"
+            print(f"Average loss for every {loss_interval} iterations: {np.mean(self.loss_record)}")
+            self.loss_record = []
+        else:
+            assert len(self.loss_record) < loss_interval, f"Loss record should not exceed {loss_interval}"
+            self.loss_record.append(loss.item())
 
     def evaluate(self, final=False):
         state = self.env.reset(seed=self.seed)
