@@ -119,7 +119,7 @@ class RAVI_NN:
 
             self.train_one_epoch()      # train for one epoch after all the samples are collected
 
-        self.evaluate(final=True)
+        self.test_evaluate(final=True)
     
     def train_one_epoch(self):
         indices = np.arange(len(self.replay_buffer))
@@ -225,6 +225,70 @@ class RAVI_NN:
                 img_path = self.save_path + f'/renders/env_render_{self.time_horizon-t}.png'
                 self.env.render(save_path=img_path)
             state = next
+            Racc += np.power(self.gamma, c) * reward
+            print(f"Accumulated Reward at t = {self.time_horizon-t}: {Racc}\n")
+
+            c += 1
+
+        if self.welfare_func_name == "nash welfare":
+            if self.wdb:
+                wandb.log({self.welfare_func_name: self.welfare_func.nash_welfare(Racc)})
+            print(f"{self.welfare_func_name}: {self.welfare_func.nash_welfare(Racc)}, Racc: {Racc}")
+        elif self.welfare_func_name in ["p-welfare", "egalitarian", "RD-threshold", "Cobb-Douglas"]:
+            if self.wdb:
+                wandb.log({self.welfare_func_name: self.welfare_func(Racc)})
+            print(f"{self.welfare_func_name}: {self.welfare_func(Racc)}, Racc: {Racc}")
+
+        if final:
+            self.Racc_record = Racc
+
+    def test_evaluate(self, final=False):
+        initial_state = self.env.reset(seed=self.seed)
+        renders_path = self.save_path + '/renders'
+        os.makedirs(renders_path, exist_ok=True)
+        img_path = self.save_path + f'/renders/env_render_init.png'
+        if isinstance(self.env, envs.Resource_Gathering.ResourceGatheringEnv):
+            self.env.render(save_path=img_path)
+        Racc = np.zeros(self.reward_dim)
+        c = 0
+
+        for t in range(self.time_horizon, 0, -1):
+            print(f"\n=== Timestep {self.time_horizon - t + 1} ===")
+
+            for state in range(self.env.observation_space.n):
+                state_tensor = torch.tensor([state], dtype=torch.float32).to(self.device)
+                Racc_tensor = torch.tensor(Racc, dtype=torch.float32).to(self.device)
+                t_tensor = torch.tensor([t], dtype=torch.float32).to(self.device)
+                
+                # Find the action that maximizes the Q-value
+                q_values = self.q_network(state_tensor, Racc_tensor, t_tensor)
+                action = torch.argmax(q_values).item()
+
+                # Decode the state to get the taxi location and passenger information
+                taxi_x, taxi_y, pass_idx = self.env.decode(state)
+                taxi_loc = (taxi_x, taxi_y)
+                has_passenger = pass_idx is not None and pass_idx != len(self.env.dest_coords)
+                pass_dest = self.env.dest_coords[pass_idx] if has_passenger else None
+
+                # Detailed printout for each timestep
+                print(f"State: {state}")
+                print(f"Taxi location: {taxi_loc}, Has passenger: {has_passenger}, Passenger destination: {pass_dest}")
+                print(f"Q-values: {q_values.cpu().detach().numpy()}")
+                print(f"Optimal action: {action}")
+            
+            # Perform the action for the initial state to proceed in the environment
+            initial_state_tensor = torch.tensor([initial_state], dtype=torch.float32).to(self.device)
+            initial_Racc_tensor = torch.tensor(Racc, dtype=torch.float32).to(self.device)
+            initial_t_tensor = torch.tensor([t], dtype=torch.float32).to(self.device)
+            q_values = self.q_network(initial_state_tensor, initial_Racc_tensor, initial_t_tensor)
+            action = torch.argmax(q_values).item()
+
+            next_state, reward, done = self.env.step(action)
+            if isinstance(self.env, envs.Resource_Gathering.ResourceGatheringEnv):
+                img_path = self.save_path + f'/renders/env_render_{self.time_horizon-t}.png'
+                self.env.render(save_path=img_path)
+            
+            initial_state = next_state
             Racc += np.power(self.gamma, c) * reward
             print(f"Accumulated Reward at t = {self.time_horizon-t}: {Racc}\n")
 
