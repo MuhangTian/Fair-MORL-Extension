@@ -40,9 +40,9 @@ class RAVI_NN:
             wdb=False, 
             scaling_factor=1, 
             hidden_dim=64, 
-            lr=1e-3, 
+            lr=1e-4, 
             batch_size=128, 
-            n_samples_per_timestep=10000, 
+            n_samples_per_timestep=40000, 
             grad_norm=1,
             avg_loss_interval=50,
         ) -> None:
@@ -77,13 +77,14 @@ class RAVI_NN:
         self.hidden_dim = hidden_dim
         self.q_network = QNetwork(self.state_dim, self.action_dim, self.reward_dim, self.hidden_dim).to(self.device)
         self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
+        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=100, gamma=0.99)  # Scheduler for learning rate, new_lr=lr×(gamma)^⌊step_size/epoch⌋
         self.criterion = nn.MSELoss()
 
         self.loss_record = []
         self.avg_loss_interval = avg_loss_interval
 
     def initialize(self):
-        num_samples = 10000  # Define a fixed number of samples for initialization
+        num_samples = 9000  # Define a fixed number of samples for initialization
         for _ in tqdm(range(num_samples), desc="Initializing Q-network..."):
             state = np.random.randint(self.env.observation_space.n)
             Racc = np.random.rand(self.reward_dim) * self.time_horizon / self.scaling_factor  # Randomly sample accumulated reward
@@ -128,6 +129,9 @@ class RAVI_NN:
         for i in range(iters):
             batch_samples = self.replay_buffer[i * self.batch_size: (i + 1) * self.batch_size]
             self.update_q_network(batch_samples)
+
+            # Step the learning rate scheduler
+            self.scheduler.step()
 
     def update_q_network(self, batch):
         # Unpack the batch into separate lists
@@ -243,6 +247,15 @@ class RAVI_NN:
             self.Racc_record = Racc
 
     def test_evaluate(self, final=False):
+        action_mapping = {
+            0: "Move South",
+            1: "Move North",
+            2: "Move East",
+            3: "Move West",
+            4: "Pick Up",
+            5: "Drop Off"
+        }
+        
         initial_state = self.env.reset(seed=self.seed)
         renders_path = self.save_path + '/renders'
         os.makedirs(renders_path, exist_ok=True)
@@ -274,7 +287,7 @@ class RAVI_NN:
                 print(f"State: {state}")
                 print(f"Taxi location: {taxi_loc}, Has passenger: {has_passenger}, Passenger destination: {pass_dest}")
                 print(f"Q-values: {q_values.cpu().detach().numpy()}")
-                print(f"Optimal action: {action}")
+                print(f"Optimal action: {action_mapping[action]}")
             
             # Perform the action for the initial state to proceed in the environment
             initial_state_tensor = torch.tensor([initial_state], dtype=torch.float32).to(self.device)
