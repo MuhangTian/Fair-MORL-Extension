@@ -4,6 +4,7 @@ import wandb
 import numpy as np
 
 from algo.RAVI_NN import RAVI_NN
+from algo.welfare_q_NN import welfare_q_NN
 from algo.welfare_q import WelfareQ
 from algo.mixture import MixturePolicy
 from algo.linear_scalarize import LinearScalarize
@@ -55,7 +56,7 @@ def parse_arguments():
     prs.add_argument("--nsw_lambda", type=is_positive_float, default=1e-4)
     prs.add_argument("--wandb", action="store_true")
     prs.add_argument("--save_path", type=is_file_not_on_disk, default="results/trial.npz")
-    prs.add_argument("--method", choices=["welfare_q", "ra_value_iteration", "linear_scalarize", "mixture", "ravi_nn"], required=True)
+    prs.add_argument("--method", choices=["welfare_q", "ra_value_iteration", "linear_scalarize", "mixture", "ravi_nn", "welfare_q_nn"], required=True)
     prs.add_argument("--lr", type=is_positive_float, default=1e-3)
     prs.add_argument("--epsilon", type=is_within_zero_one_float, default=0.1)
     prs.add_argument("--episodes", type=is_positive_integer, default=1000)
@@ -159,6 +160,22 @@ if __name__ == "__main__":
         )
     elif args.method == "ravi_nn":
         algo = RAVI_NN(
+            env = env,
+            gamma = args.gamma,
+            reward_dim = args.num_locs,
+            time_horizon = args.time_horizon,
+            welfare_func_name = args.welfare_func_name,
+            nsw_lambda = args.nsw_lambda,
+            wdb = args.wandb,
+            save_path = args.save_path,
+            p = args.p,
+            threshold = args.threshold,  # Pass threshold for resource_damage_scalarization
+            scaling_factor = args.scaling_factor,
+            lr = args.lr,  # Learning rate for the Q-network
+            hidden_dim = args.hidden_dim  # Dimension of hidden layers in the Q-network
+        )
+    elif args.method == "welfare_q_nn":
+        algo = welfare_q_NN(
             env = env,
             gamma = args.gamma,
             reward_dim = args.num_locs,
