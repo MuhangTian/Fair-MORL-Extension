@@ -42,7 +42,7 @@ class RAVI_NN:
             hidden_dim=64, 
             lr=1e-4, 
             batch_size=128, 
-            n_samples_per_timestep=40000, 
+            n_samples_per_timestep=100000, 
             grad_norm=1,
             avg_loss_interval=50,
         ) -> None:
@@ -257,6 +257,7 @@ class RAVI_NN:
         }
         
         initial_state = self.env.reset(seed=self.seed)
+        initial_state = 4
         renders_path = self.save_path + '/renders'
         os.makedirs(renders_path, exist_ok=True)
         img_path = self.save_path + f'/renders/env_render_init.png'
@@ -295,6 +296,17 @@ class RAVI_NN:
             initial_t_tensor = torch.tensor([t], dtype=torch.float32).to(self.device)
             q_values = self.q_network(initial_state_tensor, initial_Racc_tensor, initial_t_tensor)
             action = torch.argmax(q_values).item()
+
+            # Decode the state to get the taxi location and passenger information
+            taxi_x, taxi_y, pass_idx = self.env.decode(initial_state)
+            taxi_loc = (taxi_x, taxi_y)
+            has_passenger = pass_idx is not None and pass_idx != len(self.env.dest_coords)
+            pass_dest = self.env.dest_coords[pass_idx] if has_passenger else None
+
+            # Detailed printout for each timestep
+            print(f"Actual taxi location: {taxi_loc}, Has passenger: {has_passenger}, Passenger destination: {pass_dest}")
+            print(f"Q-values: {q_values.cpu().detach().numpy()}")
+            print(f"Optimal action actually executed: {action_mapping[action]}")
 
             next_state, reward, done = self.env.step(action)
             if isinstance(self.env, envs.Resource_Gathering.ResourceGatheringEnv):

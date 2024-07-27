@@ -43,8 +43,8 @@ class welfare_q_NN:
             scaling_factor=1, 
             hidden_dim=64, 
             lr=1e-4, 
-            batch_size=64, 
-            n_samples_per_timestep=50000, 
+            batch_size=128, 
+            n_samples_per_timestep=100000, 
             grad_norm=1,
             avg_loss_interval=100,
         ) -> None:
