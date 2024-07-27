@@ -11,8 +11,10 @@ import envs
 import os
 
 class QNetwork(nn.Module):
-    def __init__(self, state_dim, action_dim, reward_dim, hidden_dim=128):
+    def __init__(self, state_dim, action_dim, reward_dim, hidden_dim=64):
         super(QNetwork, self).__init__()
+        self.action_dim = action_dim
+        self.reward_dim = reward_dim
         self.fc1 = nn.Linear(1 + reward_dim + 1, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
         self.fc3 = nn.Linear(hidden_dim, action_dim * reward_dim)  # Output reward vector for each action
@@ -41,10 +43,10 @@ class welfare_q_NN:
             scaling_factor=1, 
             hidden_dim=64, 
             lr=1e-4, 
-            batch_size=128, 
-            n_samples_per_timestep=40000, 
+            batch_size=64, 
+            n_samples_per_timestep=50000, 
             grad_norm=1,
-            avg_loss_interval=50,
+            avg_loss_interval=100,
         ) -> None:
 
         self.env = env
@@ -137,29 +139,33 @@ class welfare_q_NN:
         states, Raccs, ts, transition_probs, reward_arrs, next_state_arrs = zip(*batch)
 
         # Convert lists to tensors and move to the appropriate device
-        states = torch.tensor(states, dtype=torch.float32).to(self.device) # (bsz)
-        Raccs = torch.tensor(Raccs, dtype=torch.float32).to(self.device).squeeze(-1) # (bsz)
-        ts = torch.tensor(ts, dtype=torch.float32).to(self.device) # (bsz)
+        states = torch.tensor(states, dtype=torch.float32).to(self.device)  # (bsz)
+        Raccs = torch.tensor(Raccs, dtype=torch.float32).to(self.device).squeeze(-1)  # (bsz)
+        ts = torch.tensor(ts, dtype=torch.float32).to(self.device)  # (bsz)
         transition_probs = torch.tensor(transition_probs, dtype=torch.float32).to(self.device)  # (bsz, n_actions)
-        reward_arrs = torch.tensor(reward_arrs, dtype=torch.float32).to(self.device) # (bsz, n_actions, reward_dim)
+        reward_arrs = torch.tensor(reward_arrs, dtype=torch.float32).to(self.device)  # (bsz, n_actions, 1)
         next_state_arrs = torch.tensor(next_state_arrs, dtype=torch.long).to(self.device)  # (bsz, n_actions)
 
         # Initialize a tensor to store the target Q-values for each action
-        target_q_values = torch.zeros((len(batch), self.num_actions, self.reward_dim)).to(self.device)   # (bsz, n_actions, reward_dim)
+        target_q_values = torch.zeros((len(batch), self.num_actions)).to(self.device)  # (bsz, n_actions)
 
         # Compute the target Q-values for each action
         with torch.no_grad():
             for i in range(len(batch)):
                 for a in range(self.num_actions):
                     next_state = next_state_arrs[i, a]  # Make it a 1D tensor
-                    next_Racc = Raccs[i] + torch.pow(self.gamma, self.time_horizon - ts[i]) * reward_arrs[i, a]   # 1d
+                    next_Racc = Raccs[i] + torch.pow(self.gamma, self.time_horizon - ts[i]) * reward_arrs[i, a]  # 1d
                     next_q_values = self.q_network(next_state.unsqueeze(0), next_Racc, (ts[i] - 1).unsqueeze(0))
-                    welfare_values = self.welfare_func(next_q_values)
-                    a_star = torch.argmax(welfare_values).item()
+                    next_q_values_np = next_q_values.cpu().numpy()  # Convert to numpy array
+                    welfare_values = self.welfare_func(next_q_values_np)
+                    a_star = torch.argmax(torch.tensor(welfare_values)).item()
                     target_q_values[i, a] = reward_arrs[i, a] + self.gamma * next_q_values[0, a_star]
 
         # Get the Q-values for the current state-action pairs
         q_values = self.q_network(states.unsqueeze(-1), Raccs.unsqueeze(-1), ts.unsqueeze(-1))
+
+        # Ensure both q_values and target_q_values have the same shape
+        target_q_values = target_q_values.unsqueeze(-1)
 
         # Compute the loss between the current Q-values and the target Q-values
         loss = self.criterion(q_values, target_q_values)
@@ -199,8 +205,10 @@ class welfare_q_NN:
             
             # Find the action that maximizes the welfare function applied to the Q-values
             q_values = self.q_network(state_tensor, Racc_tensor, t_tensor)
-            welfare_values = self.welfare_func(q_values)
-            action = torch.argmax(welfare_values).item()
+            q_values_np = q_values.cpu().detach().numpy()  # Convert to numpy array
+            welfare_values = self.welfare_func(q_values_np)
+            welfare_values_tensor = torch.tensor(welfare_values).to(self.device)  # Convert back to tensor
+            action = torch.argmax(welfare_values_tensor).item()
 
             next_state, reward, done = self.env.step(action)
             if isinstance(self.env, envs.Resource_Gathering.ResourceGatheringEnv):
